@@ -1,0 +1,27 @@
+@import "./styles/theme.css";
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--color-bg);
+  color: var(--color-ink);
+}
+
+#root {
+  min-height: 100svh;
+}
+
+/* ponytail: quality floor from the spec's landing page brief —
+ * honor user motion preferences and give the keyboard a visible
+ * focus ring in the brand color. */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
