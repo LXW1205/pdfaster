@@ -10,16 +10,16 @@ A pure client-side PDF editor + tool suite, built as a static SPA. Inspired by [
 npm install
 npm run dev              # vite dev server
 npm run build            # production build
-npm run test:e2e         # playwright e2e (19 tests, all client-side)
+npm run test:e2e         # playwright e2e (26 tests, all client-side)
 npm run demo:coords      # pdf-points ↔ css-px round-trip self-check
 ```
 
 ## What's in the box
 
-- **Editor** — 7 annotation tools (highlight, underline, strikethrough, rectangle, ellipse, free-draw, signature) with undo/redo, zoom, page nav, thumbnails, and AcroForm fill. All exports are vector-first (text stays searchable, forms stay fillable).
+- **Editor** — 7 annotation tools (highlight, underline, strikethrough, rectangle, ellipse, free-draw, signature) with undo/redo, zoom, page nav, thumbnails, drag-to-reorder, find-in-page, color picker, annotation list panel, AcroForm fill, and print. All exports are vector-first (text stays searchable, forms stay fillable).
 - **11 tool pages** — merge, split, delete-pages, reorder, rotate, crop, compress, watermark, page-numbers, JPG→PDF, PDF→JPG.
 - **PWA** — installable, works offline.
-- **Session restore** — IndexedDB saves your work-in-progress; an explicit prompt offers to restore on reload.
+- **Session restore + recent files** — IndexedDB saves your work-in-progress; the landing page shows the 5 most recent sessions.
 - **Strict CSP** — no remote calls, no analytics, no Google Fonts CDN. Self-hosted Blinker, self-hosted pdf.js worker.
 
 ## Stack

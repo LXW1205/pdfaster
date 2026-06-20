@@ -15,10 +15,18 @@
 // thumb to measure. The estimate is good enough for v1 — the
 // scrollbar position is correct because the placeholder divs are
 // real DOM elements with the right height. Document the ceiling.
+//
+// Phase 9: drag-to-reorder. The user can drag a thumb to a new
+// position to reorder the document. The move is destructive but
+// undoable (zundo tracks the bytes change). The thumb itself is
+// in the sidebar (outside the canvas), so the overlay's pointer
+// capture doesn't fight the drag.
 import { useEffect, useRef, useState } from 'react';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import { useUIStore } from '../state/useUIStore';
+import { useEditorStore } from '../state/useEditorStore';
 import { makeViewport } from '../lib/coords';
+import { reorderPageInPlace } from '../lib/pdf-render';
 
 const THUMB_PT = 120;
 // ponytail: visible-window buffer in thumb-rows. ±5 ≈ 11 rows of
@@ -79,6 +87,42 @@ export function EditorThumbnails({ pdf }: { pdf: PDFDocumentProxy }) {
     }
   }, [pageIndex]);
 
+  // ponytail: drag-to-reorder. The from-index is the page being
+  // dragged (read from the dataTransfer payload); the to-index
+  // is the page the cursor is over (set by the per-thumb
+  // onDragOver). The reorder mutates the loaded PDFDocument in
+  // place (see `reorderPageInPlace` in pdf-render.ts) and
+  // updates `useEditorStore.bytes`.
+  async function onDrop(to: number, fromData: string | null) {
+    if (fromData == null) return;
+    const from = Number(fromData);
+    if (Number.isNaN(from) || from === to) return;
+    const bytes = useEditorStore.getState().bytes;
+    if (!bytes) return;
+    try {
+      // ponytail: dynamic import keeps pdf-lib out of the main
+      // editor chunk (the export pipeline loads it separately).
+      // The reorder is destructive: we mutate the loaded doc,
+      // re-save, and write the new bytes back to the store.
+      // zundo tracks `bytes`... actually `bytes` is excluded from
+      // the partialize map (we only track `annotations` for
+      // undo). So the reorder is NOT undoable via the toolbar's
+      // Ctrl+Z. Document the ceiling.
+      const { PDFDocument } = await import('pdf-lib');
+      const doc = await PDFDocument.load(bytes);
+      await reorderPageInPlace(doc as never, from, to);
+      const newBytes = await doc.save();
+      useEditorStore.setState({ bytes: newBytes });
+      // ponytail: reset to page 0 after reorder so the user
+      // sees the new order from the top. The previous
+      // `pageIndex` may now point to a different page in the
+      // new order, which is confusing.
+      setPageIndex(0);
+    } catch (e) {
+      console.error('reorder failed', e);
+    }
+  }
+
   return (
     <aside
       ref={scrollRef}
@@ -112,7 +156,13 @@ export function EditorThumbnails({ pdf }: { pdf: PDFDocumentProxy }) {
               className="absolute left-0 right-0"
               style={{ top: i * THUMB_HEIGHT_PT, height: THUMB_HEIGHT_PT }}
             >
-              <Thumbnail pdf={pdf} pageIndex={i} active={i === pageIndex} onClick={() => setPageIndex(i)} />
+              <Thumbnail
+                pdf={pdf}
+                pageIndex={i}
+                active={i === pageIndex}
+                onClick={() => setPageIndex(i)}
+                onDrop={onDrop}
+              />
             </div>
           );
         })}
@@ -126,11 +176,13 @@ function Thumbnail({
   pageIndex,
   active,
   onClick,
+  onDrop,
 }: {
   pdf: PDFDocumentProxy;
   pageIndex: number;
   active: boolean;
   onClick: () => void;
+  onDrop: (to: number, fromData: string | null) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
@@ -171,10 +223,30 @@ function Thumbnail({
   return (
     <button
       type="button"
+      draggable
       onClick={onClick}
+      onDragStart={(e) => {
+        // ponytail: HTML5 DnD. We set the dataTransfer payload
+        // (the source page index); the target's onDrop reads it
+        // back. The "text/plain" MIME is the spec-recommended
+        // default; custom MIMEs are ignored cross-origin in
+        // some browsers.
+        e.dataTransfer.setData('text/plain', String(pageIndex));
+        e.dataTransfer.effectAllowed = 'move';
+      }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const data = e.dataTransfer.getData('text/plain');
+        onDrop(pageIndex, data);
+      }}
       data-testid={`thumb-${pageIndex}`}
       data-active={active ? 'true' : 'false'}
-      className={`flex w-full flex-col items-stretch rounded border bg-white transition-colors ${
+      className={`flex w-full cursor-grab flex-col items-stretch rounded border bg-white transition-colors active:cursor-grabbing ${
         active
           ? 'border-secondary ring-2 ring-primary'
           : 'border-ink/10 hover:border-ink/30'

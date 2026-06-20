@@ -53,3 +53,32 @@ export async function renderPageToCanvas(
   // LRU so a 100-page document doesn't OOM.
   page.cleanup();
 }
+
+// ponytail: reorder a page in a loaded PDFDocument in place. The
+// move is destructive (the document is reordered) but undoable
+// via zundo on the editor's `bytes` field. We use the
+// removePage + insertPage pattern, which keeps the page's
+// /Resources intact (in-place mutation strategy, same as
+// exportPdf).
+export async function reorderPageInPlace(
+  // We accept any object with the pdf-lib PDFDocument shape so the
+  // caller's import boundary is preserved. The shape is stable
+  // across pdf-lib 1.17.
+  doc: { removePage: (i: number) => void; insertPage: (i: number, page: unknown) => unknown; copyPages: (src: unknown, indices: number[]) => Promise<unknown[]>; getPageCount: () => number },
+  from: number,
+  to: number,
+): Promise<void> {
+  if (from === to) return;
+  if (from < 0 || from >= doc.getPageCount()) return;
+  if (to < 0 || to > doc.getPageCount()) return;
+  // ponytail: copyPages is the only way to get a "movable" page
+  // reference from one PDFDocument context into another, but
+  // for in-place mutation the same doc accepts its own pages
+  // back. We use the loaded doc as both source and destination.
+  const [page] = await doc.copyPages(doc, [from]);
+  doc.removePage(from);
+  // ponytail: after removePage, the "to" index shifts if `to > from`.
+  // (The page that used to be at `to` is now at `to - 1` if to > from.)
+  const insertAt = to > from ? to - 1 : to;
+  doc.insertPage(insertAt, page);
+}

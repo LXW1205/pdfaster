@@ -79,6 +79,30 @@ export const SessionStore = {
       req.onerror = () => { db.close(); reject(req.error); };
     });
   },
+  // ponytail: recent files for the landing page. We don't store the
+  // PDF binary (see the threat model in the file header), so the
+  // "click recent → re-drop" flow is the privacy-preserving compromise.
+  // Sort by updatedAt desc, cap at `limit` (default 5 — the spec's
+  // "recent" cap).
+  async list(limit = 5): Promise<SessionRecord[]> {
+    const db = await open();
+    return new Promise((resolve, reject) => {
+      const out: SessionRecord[] = [];
+      const tx = db.transaction(STORE, 'readonly');
+      const req = tx.objectStore(STORE).index(UPDATED_AT_INDEX).openCursor(null, 'prev');
+      req.onsuccess = () => {
+        const cursor = req.result;
+        if (cursor && out.length < limit) {
+          out.push(cursor.value as SessionRecord);
+          cursor.continue();
+        } else {
+          db.close();
+          resolve(out);
+        }
+      };
+      req.onerror = () => { db.close(); reject(req.error); };
+    });
+  },
   async clear(): Promise<void> {
     const db = await open();
     const tx = db.transaction(STORE, 'readwrite');

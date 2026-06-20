@@ -33,8 +33,15 @@
 //   3. Cheatsheet: <Cheatsheet /> is mounted at the editor's
 //      root; the `?` shortcut and the toolbar's discoverability
 //      button both toggle the overlay.
+//
+// Phase 9 additions (final QoL):
+//   1. ?resume=<filename> from the landing page's recent list —
+//      auto-accepts the matching session, skips the prompt. The
+//      user still has to re-drop the file (privacy: we never
+//      store the PDF binary).
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist';
+import { useSearchParams } from 'react-router-dom';
 import EditorDropZone from './EditorDropZone';
 import { useEditorStore } from '../../state/useEditorStore';
 import { useUIStore } from '../../state/useUIStore';
@@ -49,6 +56,10 @@ import { AnnotationOverlay } from '../../editor/AnnotationOverlay';
 import { SignatureOverlay } from '../../editor/SignatureOverlay';
 import { FormOverlay } from '../../editor/FormOverlay';
 import { Cheatsheet } from '../../editor/Cheatsheet';
+import { FindOverlay } from '../../editor/FindOverlay';
+import { createFindOverlayStore } from '../../editor/findStore';
+import { AnnotationListPanel } from '../../editor/AnnotationListPanel';
+import { pinchZoom } from '../../editor/pinchZoom';
 import { SessionStore, type SessionRecord } from '../../lib/session-store';
 import type { FormFieldState } from '../../state/form';
 
@@ -61,6 +72,14 @@ export default function EditorPage() {
   const bytes = useEditorStore((s) => s.bytes);
   const fileName = useEditorStore((s) => s.fileName);
   const clearDocument = useEditorStore((s) => s.clearDocument);
+  // ponytail: `?resume=<fileName>` from the landing page's recent
+  // list. We auto-accept the matching session (no prompt) because
+  // the user just clicked a link that points at this file by name
+  // — clicking IS the explicit consent. The drop zone still
+  // requires the matching file to be dropped, so the privacy
+  // guarantee (we never re-load the binary) is preserved.
+  const [searchParams] = useSearchParams();
+  const resumeName = searchParams.get('resume');
 
   const [error, setError] = useState<string | null>(null);
   // ponytail: restoreOffer is the saved session (if any) we found
@@ -68,8 +87,9 @@ export default function EditorPage() {
   // prompt — once accepted, the drop zone shows a hint with the
   // saved file's name. We don't auto-restore silently. The threat
   // model is a shared computer: the user MUST click the prompt.
+  // The `?resume=` URL param is the one explicit opt-in we honor.
   const [restoreOffer, setRestoreOffer] = useState<SessionRecord | null>(null);
-  const [restoreAccepted, setRestoreAccepted] = useState(false);
+  const [restoreAccepted, setRestoreAccepted] = useState(Boolean(resumeName));
   // ponytail: `pageCountRef` is the cheapest way to make the
   // auto-save subscription (which lives at the page level, not
   // inside LoadedEditor) aware of the current page count. The
@@ -82,6 +102,10 @@ export default function EditorPage() {
     let cancelled = false;
     (async () => {
       try {
+        // ponytail: when the user clicked a "Recent" link, the
+        // session was the whole reason for the navigation. We
+        // skip the prompt and go straight to the drop-zone hint
+        // when the `?resume=` name matches the saved record.
         const rec = await SessionStore.latest();
         if (cancelled) return;
         if (rec) {
@@ -182,7 +206,18 @@ export default function EditorPage() {
       // fields. If the new PDF has no form fields, the saved
       // values stay (the export pipeline's `try/throw` skips
       // names that don't exist).
-      const restore = restoreAccepted && restoreOffer ? restoreOffer : null;
+      //
+      // ponytail: the recent-files "click → re-drop" flow. When
+      // the user clicks a recent file, the URL carries
+      // `?resume=<fileName>` and we set `restoreAccepted=true` on
+      // mount. If a saved session exists AND its file name
+      // matches the dropped file, we restore. The matching-name
+      // guard is the privacy floor — a renamed file gets a fresh
+      // session, no annotations clobbered.
+      const restore =
+        restoreAccepted && restoreOffer && restoreOffer.fileName === file.name
+          ? restoreOffer
+          : null;
       useEditorStore.setState({
         bytes: u8,
         fileName: file.name,
@@ -201,6 +236,11 @@ export default function EditorPage() {
   }
 
   if (bytes === null) {
+    // ponytail: the resume hint is shown when EITHER the user
+    // accepted the restore prompt OR they clicked a `?resume=`
+    // link from the landing page. The matching file must still
+    // be re-dropped — we don't store the PDF binary.
+    const hintName = restoreOffer?.fileName ?? resumeName ?? undefined;
     return (
       <>
         <EditorToolbar pdf={null} pageCount={0} disabled onClose={handleClose} />
@@ -216,8 +256,8 @@ export default function EditorPage() {
             onFile={handleFile}
             error={error}
             hint={
-              restoreAccepted && restoreOffer
-                ? `Drop ${restoreOffer.fileName} to resume.`
+              hintName
+                ? `Drop ${hintName} to resume.`
                 : undefined
             }
           />
@@ -492,6 +532,22 @@ function LoadedEditorBody({
   onClose: () => void;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  // ponytail: the current page is lifted to LoadedEditorBody so
+  // the FindBar (which lives in the toolbar) can read the text
+  // content for the search. We pass it down to PageView (which
+  // already uses it for rendering) and up to the FindBar via
+  // the EditorToolbar's `findPage` prop.
+  const [page, setPage] = useState<PDFPageProxy | null>(null);
+  // ponytail: the find-overlay store is a sibling of the
+  // FindBar and FindOverlay. It's created once per LoadedEditor
+  // mount and cleared on page change. The store is just a ref
+  // + subscriber set; the FindBar writes match rects into it,
+  // the FindOverlay renders them.
+  const findStore = useMemo(() => createFindOverlayStore(), []);
+  const pageIndex = useUIStore((s) => s.pageIndex);
+  useEffect(() => {
+    findStore.clear();
+  }, [pageIndex, findStore]);
 
   // ponytail: pan state. `pan` is the rendered transform;
   // `panStartRef` is the drag start (mouse + pan at pointerdown);
@@ -503,6 +559,17 @@ function LoadedEditorBody({
   const [spaceHeld, setSpaceHeld] = useState(false);
   const [panning, setPanning] = useState(false);
   const panStartRef = useRef<{ x: number; y: number; startPan: { x: number; y: number } } | null>(null);
+
+  // ponytail: two-pointer pinch. We track all active pointers
+  // (touch + pen) in a Map; when exactly 2 are down, we record
+  // the initial distance + initial zoom. On pointermove, the
+  // new distance scales the initial zoom. The math is in
+  // `pinchZoom.ts` (a pure function for unit-testability). The
+  // update writes to the UI store; the canvas re-renders at the
+  // new zoom. The single-pointer pan (space+drag, middle-mouse)
+  // still works because we short-circuit on single-pointer moves.
+  const pinchPointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const pinchStartRef = useRef<{ distance: number; zoom: number } | null>(null);
 
   // ponytail: Space-down tracking. We preventDefault on Space
   // when not focused on a text input so the browser's default
@@ -533,20 +600,47 @@ function LoadedEditorBody({
   // ponytail: pan fires on space+drag OR middle-mouse-drag.
   // The cursor reflects the gate state so the user knows they
   // can drag. The ref-only start avoids fighting the container's
-  // own overflow scroll.
+  // own overflow scroll. Two-finger pinch is layered on top:
+  // when 2 pointers are down, we don't pan; the move handler
+  // dispatches to the pinch instead.
   const onPointerDown = (e: React.PointerEvent) => {
+    pinchPointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinchPointersRef.current.size === 2) {
+      const [a, b] = [...pinchPointersRef.current.values()];
+      pinchStartRef.current = {
+        distance: Math.hypot(a.x - b.x, a.y - b.y),
+        zoom: useUIStore.getState().zoom,
+      };
+      return;
+    }
     if (!spaceHeld && e.button !== 1) return;
     e.preventDefault();
     setPanning(true);
     panStartRef.current = { x: e.clientX, y: e.clientY, startPan: pan };
   };
   const onPointerMove = (e: React.PointerEvent) => {
+    if (pinchPointersRef.current.has(e.pointerId)) {
+      pinchPointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pinchPointersRef.current.size === 2 && pinchStartRef.current) {
+        const [a, b] = [...pinchPointersRef.current.values()];
+        const d = Math.hypot(a.x - b.x, a.y - b.y);
+        const next = pinchZoom(
+          pinchStartRef.current.zoom,
+          pinchStartRef.current.distance,
+          d,
+        );
+        useUIStore.getState().setZoom(next);
+        return;
+      }
+    }
     if (!panning || !panStartRef.current) return;
     const dx = e.clientX - panStartRef.current.x;
     const dy = e.clientY - panStartRef.current.y;
     setPan({ x: panStartRef.current.startPan.x + dx, y: panStartRef.current.startPan.y + dy });
   };
-  const onPointerUp = () => {
+  const onPointerUp = (e: React.PointerEvent) => {
+    pinchPointersRef.current.delete(e.pointerId);
+    if (pinchPointersRef.current.size < 2) pinchStartRef.current = null;
     setPanning(false);
     panStartRef.current = null;
   };
@@ -598,50 +692,87 @@ function LoadedEditorBody({
         onClose={onClose}
         onFit={onFit}
         onShowCheatsheet={() => useUIStore.getState().setCheatsheetOpen(true)}
+        findPage={page}
+        findStore={findStore}
       />
       <div className="flex h-[calc(100svh-3.5rem)]">
         <EditorThumbnails pdf={pdf} />
-        <div
-          ref={containerRef}
-          data-testid="editor-pane"
-          className="flex-1 overflow-hidden bg-ink/5 p-6"
-          style={{ cursor: spaceHeld || panning ? 'grab' : 'default' }}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
-        >
-          {/*
-            ponytail: the pan transform lives on a wrapper. The
-            wrapper is `position: relative` so PageView's absolute
-            children (canvas, overlays) are anchored to the
-            wrapper, not the scroll container. The translate is
-            applied per-pan, not as a CSS variable — the wrapper
-            re-renders cheaply on every pointermove because only
-            the transform style changes.
-          */}
+        <div className="relative flex flex-1 overflow-hidden">
           <div
-            style={{
-              transform: `translate(${pan.x}px, ${pan.y}px)`,
-              position: 'relative',
-              width: 'fit-content',
-              minWidth: '100%',
-              minHeight: '100%',
-            }}
+            ref={containerRef}
+            data-testid="editor-pane"
+            className="flex-1 overflow-hidden bg-ink/5 p-6"
+            style={{ cursor: spaceHeld || panning ? 'grab' : 'default' }}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerUp}
           >
-            <PageView pdf={pdf} onError={onError} />
+            {/*
+              ponytail: the pan transform lives on a wrapper. The
+              wrapper is `position: relative` so PageView's absolute
+              children (canvas, overlays) are anchored to the
+              wrapper, not the scroll container. The translate is
+              applied per-pan, not as a CSS variable — the wrapper
+              re-renders cheaply on every pointermove because only
+              the transform style changes.
+            */}
+            <div
+              style={{
+                transform: `translate(${pan.x}px, ${pan.y}px)`,
+                position: 'relative',
+                width: 'fit-content',
+                minWidth: '100%',
+                minHeight: '100%',
+              }}
+            >
+              <PageView pdf={pdf} onError={onError} page={page} onPage={setPage} findStore={findStore} />
+            </div>
           </div>
+          {/* ponytail: annotation list panel. Right-side, collapsible
+              (the toggle button is in the toolbar). The toggle button
+              itself floats over the editor when the panel is hidden
+              so the user can re-open it without scrolling back to
+              the toolbar. */}
+          <AnnotationListSlot pageIndex={pageIndex} />
         </div>
       </div>
     </>
   );
 }
 
-function PageView({ pdf, onError }: { pdf: PDFDocumentProxy; onError: (msg: string) => void }) {
+// ponytail: a thin wrapper that subscribes to the panel's open
+// state and toggles it. Lifting the subscription here (rather
+// than passing the state through the page's prop chain) keeps
+// the LoadedEditorBody signature simple.
+function AnnotationListSlot({ pageIndex }: { pageIndex: number }) {
+  const open = useUIStore((s) => s.annotationListOpen);
+  const setOpen = useUIStore((s) => s.setAnnotationListOpen);
+  return (
+    <AnnotationListPanel
+      pageIndex={pageIndex}
+      open={open}
+      onToggle={() => setOpen(!open)}
+    />
+  );
+}
+
+function PageView({
+  pdf,
+  onError,
+  page,
+  onPage,
+  findStore,
+}: {
+  pdf: PDFDocumentProxy;
+  onError: (msg: string) => void;
+  page: PDFPageProxy | null;
+  onPage: (p: PDFPageProxy | null) => void;
+  findStore: ReturnType<typeof createFindOverlayStore>;
+}) {
   const pageIndex = useUIStore((s) => s.pageIndex);
   const zoom = useUIStore((s) => s.zoom);
   const rotation = useUIStore((s) => s.rotation);
-  const [page, setPage] = useState<PDFPageProxy | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -649,7 +780,7 @@ function PageView({ pdf, onError }: { pdf: PDFDocumentProxy; onError: (msg: stri
       try {
         const p = await pdf.getPage(pageIndex + 1);
         if (cancelled) return;
-        setPage(p);
+        onPage(p);
       } catch (e) {
         if (!cancelled) {
           onError(`Couldn't open page ${pageIndex + 1}. ${(e as Error).message ?? String(e)}`);
@@ -659,7 +790,7 @@ function PageView({ pdf, onError }: { pdf: PDFDocumentProxy; onError: (msg: stri
     return () => {
       cancelled = true;
     };
-  }, [pdf, pageIndex, onError]);
+  }, [pdf, pageIndex, onError, onPage]);
 
   // ponytail: viewport is derived from `page` + `zoom` + `dpr` +
   // `rotation`. Computing it eagerly here (not in the canvas) means
@@ -692,6 +823,7 @@ function PageView({ pdf, onError }: { pdf: PDFDocumentProxy; onError: (msg: stri
     >
       <PdfCanvas page={page} numPages={pdf.numPages} zoom={zoom} rotation={rotation} viewport={viewport} />
       <FormOverlay viewport={viewport} pageIndex={pageIndex} />
+      <FindOverlay viewport={viewport} store={findStore} />
       <AnnotationOverlay viewport={viewport} pageIndex={pageIndex} />
       <SignatureOverlay viewport={viewport} pageIndex={pageIndex} />
     </div>

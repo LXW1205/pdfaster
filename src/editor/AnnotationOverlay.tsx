@@ -14,7 +14,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useEditorStore } from '../state/useEditorStore';
 import { useUIStore, type ToolId } from '../state/useUIStore';
 import { AnnotationRegistry } from '../annotations/registry';
-import type { Annotation, AnnotationTypeMeta, PointPts, RectPts } from '../annotations/types';
+import type { Annotation, AnnotationTypeMeta, PointPts, RectPts, Rgb } from '../annotations/types';
 import { cssToPdf, pdfToCss, type Viewport } from '../lib/coords';
 
 type Props = { viewport: Viewport; pageIndex: number };
@@ -22,6 +22,23 @@ type Props = { viewport: Viewport; pageIndex: number };
 type RectDraft = { kind: 'rect'; tool: ToolId; rect: RectPts };
 type PolylineDraft = { kind: 'polyline'; tool: ToolId; points: PointPts[] };
 type Draft = RectDraft | PolylineDraft;
+
+// ponytail: the per-tool color lookup. Looks up the picked color
+// in the store's `toolColors[activeTool]`; falls back to the
+// registry's `defaultStyle.color`. `select` (the no-op default)
+// falls back to black — picking a color while select is active
+// stores under 'select' (the picker is hidden in that case).
+function currentColorForTool(
+  tool: ToolId,
+  picked: Partial<Record<string, Rgb>> = {},
+): Rgb {
+  const pickedColor = picked[tool];
+  if (pickedColor) return pickedColor;
+  if (tool === 'select') return [0, 0, 0];
+  const meta = AnnotationRegistry.list().find((m) => m.tool === tool);
+  if (!meta) return [0, 0, 0];
+  return meta.defaultStyle.color;
+}
 
 export function AnnotationOverlay({ viewport, pageIndex }: Props) {
   const annotations = useEditorStore((s) => s.annotations);
@@ -46,6 +63,21 @@ export function AnnotationOverlay({ viewport, pageIndex }: Props) {
   const onPage = useMemo(
     () => annotations.filter((a) => a.pageIndex === pageIndex).sort((a, b) => a.createdAt - b.createdAt),
     [annotations, pageIndex],
+  );
+
+  // ponytail: the per-tool picked color. The map is a stable
+  // reference until `setToolColor` runs, so this subscription
+  // fires only on a color pick. Reads via `useStore` directly
+  // would also work; we go through the typed hook.
+  const toolColors = useEditorStore((s) => s.toolColors);
+
+  // ponytail: the picked color for the active tool. Reads from
+  // `useEditorStore.toolColors[activeTool]`; falls back to the
+  // registry's default. Returned as a plain tuple (the store
+  // type is `Rgb`, the registry default is also `Rgb`).
+  const currentColor = useMemo<Rgb>(
+    () => currentColorForTool(activeTool, toolColors),
+    [activeTool, toolColors],
   );
 
   const localCoords = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -101,7 +133,11 @@ export function AnnotationOverlay({ viewport, pageIndex }: Props) {
       // (e.g. comment threads, sticky notes) needs IDs and we want
       // a single place to swap to a non-UUID scheme.
       pageIndex,
-      color: meta.defaultStyle.color as unknown as readonly [number, number, number],
+      // ponytail: prefer the per-tool picked color from the store;
+      // fall back to the registry's default. The store's
+      // `toolColors` key is the ToolId, not the AnnotationType, so
+      // we look up by the active tool id.
+      color: currentColor,
       opacity: meta.defaultStyle.opacity,
       createdAt: Date.now(),
     };
@@ -162,7 +198,9 @@ export function AnnotationOverlay({ viewport, pageIndex }: Props) {
       type: 'freedraw',
       pageIndex,
       points: d.points,
-      color: meta.defaultStyle.color as unknown as readonly [number, number, number],
+      // ponytail: see the rect branch — use the per-tool picked
+      // color when present, fall back to the registry default.
+      color: currentColor,
       opacity: meta.defaultStyle.opacity,
       strokeWidth: meta.defaultStyle.strokeWidth ?? 2,
       createdAt: Date.now(),
@@ -241,14 +279,14 @@ export function AnnotationOverlay({ viewport, pageIndex }: Props) {
         <RectView
           rect={draft.rect}
           type={meta!.type as 'highlight' | 'underline' | 'strikethrough' | 'rectangle' | 'ellipse'}
-          color={meta!.defaultStyle.color as unknown as readonly [number, number, number]}
+          color={currentColor}
           opacity={meta!.defaultStyle.opacity}
           strokeWidth={meta!.defaultStyle.strokeWidth}
           viewport={viewport}
           draft
         />
       )}
-      {draft?.kind === 'polyline' && draft.tool === activeTool && <PolylineView points={draft.points} meta={meta!} viewport={viewport} draft />}
+      {draft?.kind === 'polyline' && draft.tool === activeTool && <PolylineView points={draft.points} color={currentColor} strokeWidth={meta!.defaultStyle.strokeWidth} opacity={meta!.defaultStyle.opacity} viewport={viewport} draft />}
     </div>
   );
 }

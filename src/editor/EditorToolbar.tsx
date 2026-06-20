@@ -15,16 +15,27 @@
 //      page nav, zoom-fit. Skips when an <input>/<textarea>/
 //      [contenteditable] is focused. The Cheatsheet has its own
 //      handler for the `?` toggle.
+//
+// Phase 9 polish:
+//   1. Find button (next to Zoom) — opens the find bar; the
+//      FindBar component handles its own state. The toolbar
+//      just toggles the UI store's `findOpen` flag.
+//   2. Print button — exports the PDF (with annotations baked
+//      in) and opens the result in a new tab for the user to
+//      print from the browser's built-in PDF viewer.
 import { useEffect, useState } from 'react';
 import { useStore } from 'zustand';
 import { useEditorStore } from '../state/useEditorStore';
 import { useUIStore } from '../state/useUIStore';
 import { Container } from '../components/Container';
 import { ToolPicker } from './ToolPicker';
+import { ColorPicker } from './ColorPicker';
+import { FindBar } from './FindBar';
+import type { FindOverlayStore } from './findStore';
 import { exportPdf } from './exportPdf';
 import { downloadBytes } from '../lib/download';
 import { TOOL_KEY_MAP } from './cheatsheet-data';
-import type { PDFDocumentProxy } from 'pdfjs-dist';
+import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist';
 
 type Props = {
   pdf: PDFDocumentProxy | null;
@@ -49,6 +60,11 @@ type Props = {
   // useUIStore; the click handler does the same so users without
   // the shortcut get the same surface.
   onShowCheatsheet?: () => void;
+  // ponytail: the current page (lifted from PageView) so the
+  // FindBar can read text content. The toolbar doesn't use it
+  // directly — it just threads it down to the FindBar render.
+  findPage?: PDFPageProxy | null;
+  findStore?: FindOverlayStore;
 };
 
 // ponytail: zundo 2.x types `useEditorStore.temporal` as a vanilla
@@ -66,7 +82,7 @@ const useFutureDepth = () =>
 // live in the page). When the toolbar is rendered without an
 // `onExport` (e.g. pre-load drop-zone state), the export button is
 // disabled.
-export function EditorToolbar({ pdf, pageCount, fileName, disabled, onExport, onClose, onFit, onShowCheatsheet }: Props) {
+export function EditorToolbar({ pdf, pageCount, fileName, disabled, onExport, onClose, onFit, onShowCheatsheet, findPage, findStore }: Props) {
   // ponytail: subscribe to pastStates / futureStates lengths only,
   // not the full arrays. Re-renders fire only when history depth
   // changes. The buttons call `useEditorStore.temporal.getState()`
@@ -81,6 +97,10 @@ export function EditorToolbar({ pdf, pageCount, fileName, disabled, onExport, on
   const setPageIndex = useUIStore((s) => s.setPageIndex);
   const rotation = useUIStore((s) => s.rotation);
   const setRotation = useUIStore((s) => s.setRotation);
+  const annotationListOpen = useUIStore((s) => s.annotationListOpen);
+  const setAnnotationListOpen = useUIStore((s) => s.setAnnotationListOpen);
+  const findOpen = useUIStore((s) => s.findOpen);
+  const setFindOpen = useUIStore((s) => s.setFindOpen);
 
   const [exporting, setExporting] = useState(false);
 
@@ -93,6 +113,30 @@ export function EditorToolbar({ pdf, pageCount, fileName, disabled, onExport, on
     try {
       const out = await exportPdf();
       downloadBytes(out, 'edited.pdf', 'application/pdf');
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  // ponytail: print flow. We export the PDF (with annotations
+  // baked in) and open the result in a new tab; the user clicks
+  // the browser's print button in the PDF viewer. We don't
+  // auto-trigger window.print() — cross-origin restrictions
+  // (the new tab loads a blob: URL that we can't drive JS into)
+  // make that brittle. The 60s revoke keeps Safari happy; the
+  // blob: URL outlives the user click for the typical
+  // "look-at-it-then-print" path.
+  async function handlePrint() {
+    setExporting(true);
+    try {
+      const out = await exportPdf();
+      const buf = out.buffer.slice(out.byteOffset, out.byteOffset + out.byteLength) as ArrayBuffer;
+      const blob = new Blob([buf], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank', 'noopener');
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (e) {
+      console.error('print failed', e);
     } finally {
       setExporting(false);
     }
@@ -125,6 +169,14 @@ export function EditorToolbar({ pdf, pageCount, fileName, disabled, onExport, on
       if ((e.ctrlKey || e.metaKey) && ((e.key === 'z' && e.shiftKey) || e.key === 'y')) {
         e.preventDefault();
         useEditorStore.temporal.getState().redo();
+        return;
+      }
+      // Find: Ctrl/Cmd+F opens the find bar. (We don't intercept
+      // the browser's native F3 — it doesn't open our bar; users
+      // will discover the Ctrl+F shortcut from the cheatsheet.)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault();
+        useUIStore.getState().setFindOpen(true);
         return;
       }
       // Zoom fit.
@@ -177,6 +229,7 @@ export function EditorToolbar({ pdf, pageCount, fileName, disabled, onExport, on
           </span>
         )}
         <ToolPicker />
+        <ColorPicker />
 
         <Divider />
 
@@ -287,6 +340,19 @@ export function EditorToolbar({ pdf, pageCount, fileName, disabled, onExport, on
 
         <Divider />
 
+        <button
+          type="button"
+          data-testid="find-open"
+          onClick={() => setFindOpen(true)}
+          aria-label="Find in page"
+          title="Find in page (Ctrl+F)"
+          className="rounded px-3 py-2 text-xs text-ink/60 hover:bg-ink/5"
+        >
+          Find
+        </button>
+
+        <Divider />
+
         <select
           data-testid="rotation-select"
           aria-label="Page rotation"
@@ -301,6 +367,14 @@ export function EditorToolbar({ pdf, pageCount, fileName, disabled, onExport, on
         </select>
 
         <div className="ml-auto flex items-center gap-2">
+          {findPage !== undefined && findStore && (
+            <FindBar
+              open={findOpen}
+              page={findPage}
+              store={findStore}
+              onClose={() => setFindOpen(false)}
+            />
+          )}
           {onShowCheatsheet && (
             <button
               type="button"
@@ -313,6 +387,16 @@ export function EditorToolbar({ pdf, pageCount, fileName, disabled, onExport, on
               ?
             </button>
           )}
+          <button
+            type="button"
+            data-testid="annotation-list-toggle"
+            onClick={() => setAnnotationListOpen(!annotationListOpen)}
+            aria-label={annotationListOpen ? 'Hide annotation list' : 'Show annotation list'}
+            title="Annotation list"
+            className="rounded-md px-3 py-2 text-base text-ink/60 hover:bg-ink/5 hover:text-ink"
+          >
+            {annotationListOpen ? '▾' : '▸'} List
+          </button>
           {onClose && (
             <button
               type="button"
@@ -325,6 +409,15 @@ export function EditorToolbar({ pdf, pageCount, fileName, disabled, onExport, on
               Close
             </button>
           )}
+          <button
+            type="button"
+            data-testid="print"
+            onClick={handlePrint}
+            disabled={disabled || exporting}
+            className="inline-flex items-center gap-1 rounded-md border border-ink/20 bg-bg px-4 py-2 text-base font-medium text-ink/80 transition-colors hover:bg-ink/5 disabled:opacity-50"
+          >
+            Print
+          </button>
           <button
             type="button"
             data-testid="export-pdf"

@@ -17,11 +17,20 @@ type State = {
   // single source of truth so the Cheatsheet component can mount
   // at the editor's root and read/write it without prop-drilling.
   cheatsheetOpen: boolean;
+  // ponytail: find bar visibility. A boolean (not the query
+  // itself) because the query is local state in the FindBar.
+  findOpen: boolean;
+  // ponytail: annotation list panel visibility. Default-open on
+  // first load so users see the panel exists; the toolbar's
+  // toggle button flips it.
+  annotationListOpen: boolean;
   setActiveTool: (t: ToolId) => void;
   setPageIndex: (i: number) => void;
   setZoom: (z: number) => void;
   setRotation: (r: 0 | 90 | 180 | 270) => void;
   setCheatsheetOpen: (b: boolean) => void;
+  setFindOpen: (b: boolean) => void;
+  setAnnotationListOpen: (b: boolean) => void;
 };
 
 // ponytail: `select` is the no-op default. Phase 6 wires the rest
@@ -34,9 +43,13 @@ export const useUIStore = create<State>((set) => ({
   zoom: 1.0,
   rotation: 0,
   cheatsheetOpen: false,
+  findOpen: false,
+  annotationListOpen: true,
   setActiveTool: (t) => set({ activeTool: t }),
   setPageIndex: (i) => set({ pageIndex: i }),
   setZoom: (z) => set({ zoom: z }),
   setRotation: (r) => set({ rotation: r }),
   setCheatsheetOpen: (b) => set({ cheatsheetOpen: b }),
+  setFindOpen: (b) => set({ findOpen: b }),
+  setAnnotationListOpen: (b) => set({ annotationListOpen: b }),
 }));

@@ -1,7 +1,7 @@
 # pdfaster — Design Spec
 
-- **Date:** 2026-06-19 (v1 design) · 2026-06-20 (phase 7 — polish + remaining features) · 2026-06-20 (phase 8 — quality-of-life polish)
-- **Status:** v1 shipped · phase 7 closed the polish + remaining-features phase · phase 8 ships the QoL polish
+- **Date:** 2026-06-19 (v1 design) · 2026-06-20 (phase 7 — polish + remaining features) · 2026-06-20 (phase 8 — quality-of-life polish) · 2026-06-20 (phase 9 — final QoL)
+- **Status:** v1 shipped · phase 7 closed the polish + remaining-features phase · phase 8 ships the QoL polish · phase 9 closes the final-QoL batch
 - **Reference:** https://pdfshelter.com/
 
 ## Goal
@@ -126,6 +126,16 @@ Default is interactive, searchable, accessible, fillable PDF. Raster-on-export i
 - **Tool keyboard shortcuts.** V/H/U/T/R/E/F/S map to the registered tool IDs. `[` / `]` for page nav, `0` for zoom-fit. `Ctrl+Z` / `Ctrl+Shift+Z` (and `Ctrl+Y`) for undo/redo. Every shortcut skips when an `<input>`, `<textarea>`, or `[contenteditable]` is focused — the difference between a useful shortcut and a frustrating one.
 - **Space-drag pan.** Hold `Space` and drag the canvas, or middle-mouse-drag, to pan. The transform lives on a wrapper div (`translate(x, y)`); the page-canvas and overlays are not moved individually. Resets when the document changes (via `LoadedEditor`'s `key={bytes.byteLength}` remount). Cursor reflects the gate state (`grab` when Space is held).
 - **`?` cheatsheet.** A discoverability overlay (`<div role="dialog" aria-modal="true">`) listing every keyboard shortcut. Triggered by `?` (shift + `/` on US layouts) and a `?` button in the toolbar. Closes on `Esc` or a click on the backplate. The `SHORTCUTS` array in `src/editor/cheatsheet-data.ts` is the single source of truth — the toolbar's keydown map and the cheatsheet's display rows are both derived from it.
+
+## Phase 9 polish (shipped 2026-06-20)
+
+- **Recent files on the landing page.** `SessionStore.list()` returns the 5 most recent sessions sorted by `updatedAt` desc. The landing page renders a "Recent" section with file name, size, and relative time. Clicking a row navigates to `/editor?resume=<filename>`; the editor auto-accepts the matching session (the matching file must still be re-dropped — the PDF binary is never stored in IndexedDB, so the threat-model guarantee holds).
+- **Find within the current page.** A `Find` button in the toolbar (and `Ctrl+F` shortcut) opens an inline find bar. The search effect uses `useDeferredValue` so typing stays snappy while the canvas re-renders match highlights. Match rectangles are drawn as a sibling layer above the canvas. `Enter` cycles to the next match (Shift+Enter = previous), `Esc` closes the bar. The current match is highlighted with a stronger outline.
+- **Print button.** The toolbar gains a `Print` button next to `Export PDF`. Click → export the PDF (with annotations baked in) → open the result in a new tab as a `blob:` URL. The user prints from the browser's built-in PDF viewer. We don't auto-trigger `window.print()` — cross-origin restrictions make that brittle. `setTimeout(revoke, 60_000)` keeps Safari happy.
+- **Annotation list panel.** A right-side panel lists annotations on the current page (sorted by `createdAt`). Each row has a type label, a color swatch, a relative timestamp, and a delete button. The panel is collapsible (chevron toggle in the toolbar) and default-open. Future enhancement: "focus" the canvas on a row (scroll-to-center). v1 ships list + delete only.
+- **Color picker.** A 5-color palette (yellow, teal, red, dark gray, black) appears in the toolbar when an annotation tool is active. Picking a color sets the `currentColor` for the active tool in `useEditorStore.toolColors` (per-tool, so switching tools restores the last-picked color). The annotation's `color` field is the picked value at draw time, so the export is consistent with the visual.
+- **Pinch-to-zoom.** Two-pointer pinch on touch devices scales the canvas zoom. The math is a pure function in `pinchZoom.ts` (testable in isolation); the EditorPage's `onPointerMove` handler reads the distance between two active pointers and writes the new zoom to the UI store. Ceiling: the pinch is anchored at the (0, 0) corner of the container, not at the pinch center.
+- **Drag-to-reorder thumbnails.** Each `Thumbnail` is now `draggable`. Drag a thumb to a new position; the `onDrop` handler mutates the loaded PDFDocument in place via `reorderPageInPlace` (pdf-lib's `removePage` + `insertPage`) and writes the new bytes to `useEditorStore.bytes`. The reorder is destructive but un-doable via the toolbar's Ctrl+Z (the `bytes` field is partialize-tracked for this purpose). Ceiling: not undoable — `bytes` is excluded from the partialize map (only `annotations` are tracked), so the destructive nature is documented but not reversed by the standard undo.
 
 ## Tool suite (v1 — 11 tool pages)
 
