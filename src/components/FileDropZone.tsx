@@ -25,9 +25,9 @@ export function FileDropZone({ accept, multiple = false, onFiles, hint }: Props)
         const files = [...(e.dataTransfer.files ?? [])];
         if (files.length) onFiles(multiple ? files : [files[0]!]);
       }}
-      className="rounded-lg border-2 border-dashed border-secondary/60 bg-secondary/5 px-6 py-10 text-center"
+      className="rounded-lg border-2 border-dashed border-secondary/60 bg-secondary/5 px-8 py-14 text-center"
     >
-      <p className="text-base font-medium text-ink">Drop {multiple ? 'files' : 'a file'} here</p>
+      <p className="text-lg font-medium text-ink">Drop {multiple ? 'files' : 'a file'} here</p>
       <p className="mt-1 text-sm text-ink/60">or</p>
       <label className="mt-3 inline-block cursor-pointer rounded-md bg-primary px-4 py-2 text-sm font-medium text-ink hover:bg-secondary focus-within:ring-2 focus-within:ring-primary">
         Choose {multiple ? 'files' : 'a file'}

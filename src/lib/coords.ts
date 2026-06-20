@@ -110,6 +110,23 @@ export function renderTransform(
   return [v.dpr, 0, 0, v.dpr, 0, 0];
 }
 
+// ponytail: fit-to-container zoom math. The caller passes the page's
+// natural CSS size (zoom=1) and the available content area; the
+// returned multiplier is the largest zoom that fits the page into
+// the area on both axes. Capped at 4x to match the toolbar's manual
+// zoom ceiling — a 400%-fit is unlikely in practice but a runaway
+// fit is a real risk for tiny pages in giant windows.
+export function fitZoom(
+  pageWidthCss: number,
+  pageHeightCss: number,
+  available: { w: number; h: number },
+  padding = 32,
+): number {
+  const sx = (available.w - padding * 2) / pageWidthCss;
+  const sy = (available.h - padding * 2) / pageHeightCss;
+  return Math.min(sx, sy, 4);
+}
+
 function rand(min: number, max: number): number {
   return min + Math.random() * (max - min);
 }

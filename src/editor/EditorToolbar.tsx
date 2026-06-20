@@ -1,11 +1,20 @@
 // ponytail: the editor's chrome. Tool picker, undo/redo, zoom,
-// page nav, export. All buttons are small + quiet per the
-// frontend-design brief — the canvas is the subject.
+// page nav, export, cheatsheet. All buttons are small + quiet
+// per the frontend-design brief — the canvas is the subject.
 //
 // Subscriptions are scoped: undo/redo subscribe to history depth
 // only, not the past/future arrays. This keeps the toolbar from
 // re-rendering on every annotation add (which would also re-render
 // the canvas, the thumbnails, etc.).
+//
+// Phase 8 polish:
+//   1. Bigger hit targets (px-3 py-2 = 44px-ish on the IconButton).
+//   2. Zoom-to-fit button + `0` shortcut — EditorPage owns the
+//      container ref; the toolbar calls the onFit callback.
+//   3. Single keyboard handler for tool selection, undo/redo,
+//      page nav, zoom-fit. Skips when an <input>/<textarea>/
+//      [contenteditable] is focused. The Cheatsheet has its own
+//      handler for the `?` toggle.
 import { useEffect, useState } from 'react';
 import { useStore } from 'zustand';
 import { useEditorStore } from '../state/useEditorStore';
@@ -14,6 +23,7 @@ import { Container } from '../components/Container';
 import { ToolPicker } from './ToolPicker';
 import { exportPdf } from './exportPdf';
 import { downloadBytes } from '../lib/download';
+import { TOOL_KEY_MAP } from './cheatsheet-data';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 
 type Props = {
@@ -29,6 +39,16 @@ type Props = {
   // to a "Clear session on tab close" hook is a 1-day add when
   // the threat model demands it.
   onClose?: () => void;
+  // ponytail: onFit is the toolbar's hook into the page's CSS size
+  // + the container's available area. EditorPage owns the ref; the
+  // toolbar just calls the callback (the math lives in the page
+  // because that's where the dimensions are measurable).
+  onFit?: () => void;
+  // ponytail: onShowCheatsheet is the discoverability button. The
+  // keyboard shortcut (`?`) toggles the cheatsheet via the
+  // useUIStore; the click handler does the same so users without
+  // the shortcut get the same surface.
+  onShowCheatsheet?: () => void;
 };
 
 // ponytail: zundo 2.x types `useEditorStore.temporal` as a vanilla
@@ -46,7 +66,7 @@ const useFutureDepth = () =>
 // live in the page). When the toolbar is rendered without an
 // `onExport` (e.g. pre-load drop-zone state), the export button is
 // disabled.
-export function EditorToolbar({ pdf, pageCount, fileName, disabled, onExport, onClose }: Props) {
+export function EditorToolbar({ pdf, pageCount, fileName, disabled, onExport, onClose, onFit, onShowCheatsheet }: Props) {
   // ponytail: subscribe to pastStates / futureStates lengths only,
   // not the full arrays. Re-renders fire only when history depth
   // changes. The buttons call `useEditorStore.temporal.getState()`
@@ -78,25 +98,65 @@ export function EditorToolbar({ pdf, pageCount, fileName, disabled, onExport, on
     }
   }
 
-  // ponytail: keyboard shortcuts at the window level. Scoped to
-  // `/editor` route when the editor is mounted (the cleanup removes
-  // the listener on unmount). Promote to a `useKeyboardShortcuts`
-  // hook when the form-fill tool or a future text-box editor also
-  // wants Ctrl+Z / Ctrl+Shift+Z.
+  // ponytail: one keyboard handler for all editor shortcuts. The
+  // `isEditableTarget` skip is the difference between a useful
+  // shortcut and a frustrating one — without it, typing a `v` in
+  // the page-jump input would switch the active tool. The Cheatsheet
+  // owns its own `?` toggle (a separate effect in Cheatsheet.tsx)
+  // so this handler can stay focused on editor actions. The
+  // `pageIndex` + `pageCount` + `onFit` deps force a fresh handler
+  // when the navigation state changes; the cheatsheet never closes
+  // a text input mid-type, so input-skipping is the load-bearing
+  // detail.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (!(e.ctrlKey || e.metaKey)) return;
-      if (e.key === 'z' && !e.shiftKey) {
+      const target = e.target;
+      if (target instanceof HTMLElement) {
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+          return;
+        }
+      }
+      // Undo/redo.
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
         useEditorStore.temporal.getState().undo();
-      } else if ((e.key === 'z' && e.shiftKey) || e.key === 'y') {
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && ((e.key === 'z' && e.shiftKey) || e.key === 'y')) {
         e.preventDefault();
         useEditorStore.temporal.getState().redo();
+        return;
+      }
+      // Zoom fit.
+      if (!e.ctrlKey && !e.metaKey && e.key === '0') {
+        e.preventDefault();
+        onFit?.();
+        return;
+      }
+      // Page nav.
+      if (e.key === '[') {
+        e.preventDefault();
+        useUIStore.getState().setPageIndex(Math.max(0, pageIndex - 1));
+        return;
+      }
+      if (e.key === ']') {
+        e.preventDefault();
+        useUIStore.getState().setPageIndex(Math.min(pageCount - 1, pageIndex + 1));
+        return;
+      }
+      // Tool selection. Skip when a modifier is held so Ctrl+V
+      // (paste), Cmd+S (save), etc. don't switch tools.
+      if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+        const tool = TOOL_KEY_MAP[e.key.toLowerCase()];
+        if (tool) {
+          e.preventDefault();
+          useUIStore.getState().setActiveTool(tool);
+        }
       }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [pageIndex, pageCount, onFit]);
 
   const hasDoc = !disabled && pdf !== null && pageCount > 0;
 
@@ -110,7 +170,7 @@ export function EditorToolbar({ pdf, pageCount, fileName, disabled, onExport, on
         {fileName && (
           <span
             data-testid="editor-filename"
-            className="mr-2 max-w-[12rem] truncate text-sm font-medium text-ink/80"
+            className="mr-2 max-w-[12rem] truncate text-base font-medium text-ink/80"
             title={fileName}
           >
             {fileName}
@@ -148,7 +208,7 @@ export function EditorToolbar({ pdf, pageCount, fileName, disabled, onExport, on
         </IconButton>
         <span
           data-testid="zoom-label"
-          className="min-w-[3.25rem] select-none text-center text-sm tabular-nums text-ink/70"
+          className="min-w-[3.25rem] select-none text-center text-base tabular-nums text-ink/70"
         >
           {Math.round(zoom * 100)}%
         </span>
@@ -161,9 +221,19 @@ export function EditorToolbar({ pdf, pageCount, fileName, disabled, onExport, on
         </IconButton>
         <button
           type="button"
+          data-testid="zoom-fit"
+          onClick={() => onFit?.()}
+          aria-label="Zoom to fit"
+          title="Zoom to fit (0)"
+          className="rounded px-3 py-2 text-xs text-ink/60 hover:bg-ink/5"
+        >
+          Fit
+        </button>
+        <button
+          type="button"
           data-testid="zoom-reset"
           onClick={() => setZoom(1)}
-          className="rounded px-2 py-1 text-xs text-ink/60 hover:bg-ink/5"
+          className="rounded px-3 py-2 text-xs text-ink/60 hover:bg-ink/5"
         >
           Reset
         </button>
@@ -180,7 +250,7 @@ export function EditorToolbar({ pdf, pageCount, fileName, disabled, onExport, on
         </IconButton>
         <span
           data-testid="page-indicator"
-          className="flex items-center gap-1 text-sm tabular-nums text-ink/70"
+          className="flex items-center gap-1 text-base tabular-nums text-ink/70"
         >
           {/*
             ponytail: the page number is a visible text node, not an
@@ -222,7 +292,7 @@ export function EditorToolbar({ pdf, pageCount, fileName, disabled, onExport, on
           aria-label="Page rotation"
           value={rotation}
           onChange={(e) => setRotation(Number(e.target.value) as 0 | 90 | 180 | 270)}
-          className="rounded border border-ink/15 bg-transparent px-2 py-1 text-sm text-ink/70 focus:border-primary focus:outline-none"
+          className="rounded border border-ink/15 bg-transparent px-3 py-2 text-base text-ink/70 focus:border-primary focus:outline-none"
         >
           <option value={0}>0°</option>
           <option value={90}>90°</option>
@@ -231,6 +301,18 @@ export function EditorToolbar({ pdf, pageCount, fileName, disabled, onExport, on
         </select>
 
         <div className="ml-auto flex items-center gap-2">
+          {onShowCheatsheet && (
+            <button
+              type="button"
+              data-testid="cheatsheet-open"
+              onClick={() => onShowCheatsheet()}
+              aria-label="Show keyboard shortcuts"
+              title="Keyboard shortcuts (?)"
+              className="rounded-md px-3 py-2 text-base text-ink/60 hover:bg-ink/5 hover:text-ink"
+            >
+              ?
+            </button>
+          )}
           {onClose && (
             <button
               type="button"
@@ -238,7 +320,7 @@ export function EditorToolbar({ pdf, pageCount, fileName, disabled, onExport, on
               onClick={onClose}
               aria-label="Close editor and clear saved session"
               title="Clear the saved session"
-              className="rounded-md px-3 py-1.5 text-sm font-medium text-ink/60 hover:bg-ink/5 hover:text-ink"
+              className="rounded-md px-4 py-2 text-base font-medium text-ink/60 hover:bg-ink/5 hover:text-ink"
             >
               Close
             </button>
@@ -248,7 +330,7 @@ export function EditorToolbar({ pdf, pageCount, fileName, disabled, onExport, on
             data-testid="export-pdf"
             onClick={handleExportClick}
             disabled={disabled || exporting}
-            className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-ink shadow-sm transition-colors hover:bg-secondary hover:text-bg disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
+            className="inline-flex items-center gap-1 rounded-md bg-primary px-4 py-2 text-base font-semibold text-ink shadow-sm transition-colors hover:bg-secondary hover:text-bg disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
           >
             {exporting ? 'Exporting…' : 'Export PDF'}
           </button>
@@ -275,6 +357,10 @@ function IconButton({
   disabled?: boolean;
   children: React.ReactNode;
 }) {
+  // ponytail: px-3 py-2 ≈ 44px hit target on a 17px root font — the
+  // spec's a11y floor. Bumping the root font from 16px to 17px in
+  // index.css also stretches every text-* utility, but the padding
+  // is on the box, not the text, so this needs an explicit change.
   return (
     <button
       type="button"
@@ -282,7 +368,7 @@ function IconButton({
       aria-label={label}
       onClick={onClick}
       disabled={disabled}
-      className="rounded px-2 py-1 text-ink/70 transition-colors hover:bg-ink/5 hover:text-ink disabled:opacity-30 disabled:hover:bg-transparent"
+      className="rounded px-3 py-2 text-ink/70 transition-colors hover:bg-ink/5 hover:text-ink disabled:opacity-30 disabled:hover:bg-transparent"
     >
       {children}
     </button>

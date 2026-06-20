@@ -1,7 +1,7 @@
 # pdfaster — Design Spec
 
-- **Date:** 2026-06-19 (v1 design) · 2026-06-20 (phase 7 — polish + remaining features)
-- **Status:** v1 shipped · phase 7 closes the polish + remaining-features phase
+- **Date:** 2026-06-19 (v1 design) · 2026-06-20 (phase 7 — polish + remaining features) · 2026-06-20 (phase 8 — quality-of-life polish)
+- **Status:** v1 shipped · phase 7 closed the polish + remaining-features phase · phase 8 ships the QoL polish
 - **Reference:** https://pdfshelter.com/
 
 ## Goal
@@ -118,6 +118,15 @@ Default is interactive, searchable, accessible, fillable PDF. Raster-on-export i
 - IndexedDB session restore (explicit prompt; never silent auto-restore).
 - a11y pass: focus rings (`:focus-visible` brand-color), reduced-motion respected, every `<button>` labeled, every `<input type="file">` labeled, editor canvas `role="img" aria-label="PDF page {n} of {N}"`, restore prompt `role="dialog" aria-modal="true"` with `aria-labelledby`/`aria-describedby`, nav `<header>` and `<nav aria-label="Main">` labeled.
 
+## Phase 8 polish (shipped 2026-06-20)
+
+- **Bigger UI.** `:root { font-size: 17px }` is the single global change; every Tailwind `text-*` utility is rem-based, so the bump cascades to every text element. Button padding bumped to `px-3 py-2` (44 px hit target). Nav links + container + drop zones bumped to `px-4 py-2` / `px-8 py-14` / `px-8` for the spec's "comfortable" UI floor. The toolbar's text-ink/70 mute levels stay. *ponytail: a `Compact` UI is one class-toggle away — `body.compact { font-size: 15px }` — and YAGNI today.*
+- **Thumbnail virtualization.** `EditorThumbnails` renders only the page indices within ±5 of the visible window. Pages outside the window are thin placeholder divs (just the page number) that keep the scrollbar accurate. A 200-page PDF costs the same as a 5-page PDF at any moment. The placeholder's height is an estimate (PDF point size of the thumbnail + label); for a more accurate spacer, render a hidden first thumb to measure.
+- **Auto-zoom-to-fit.** A `Fit` button in the toolbar (between zoom-out and Reset) and the `0` shortcut. The fit math: `min(available.w / pageWidth, available.h / pageHeight, 4)` with a 32 px visual padding, capped at 4× to match the manual zoom ceiling. Reset pan on fit so the user's hand-eye expectation holds. `lib/coords.ts#fitZoom` is the single point of truth.
+- **Tool keyboard shortcuts.** V/H/U/T/R/E/F/S map to the registered tool IDs. `[` / `]` for page nav, `0` for zoom-fit. `Ctrl+Z` / `Ctrl+Shift+Z` (and `Ctrl+Y`) for undo/redo. Every shortcut skips when an `<input>`, `<textarea>`, or `[contenteditable]` is focused — the difference between a useful shortcut and a frustrating one.
+- **Space-drag pan.** Hold `Space` and drag the canvas, or middle-mouse-drag, to pan. The transform lives on a wrapper div (`translate(x, y)`); the page-canvas and overlays are not moved individually. Resets when the document changes (via `LoadedEditor`'s `key={bytes.byteLength}` remount). Cursor reflects the gate state (`grab` when Space is held).
+- **`?` cheatsheet.** A discoverability overlay (`<div role="dialog" aria-modal="true">`) listing every keyboard shortcut. Triggered by `?` (shift + `/` on US layouts) and a `?` button in the toolbar. Closes on `Esc` or a click on the backplate. The `SHORTCUTS` array in `src/editor/cheatsheet-data.ts` is the single source of truth — the toolbar's keydown map and the cheatsheet's display rows are both derived from it.
+
 ## Tool suite (v1 — 11 tool pages)
 
 The suite follows PDFShelter's lead, expanded with client-side-feasible picks from smallpdf.com's catalogue. PDF↔Word/Excel/PPT, OCR, Redact, Compare, and all AI features are out of scope (require server-side processing — incompatible with the "no-cloud" positioning).
@@ -207,9 +216,12 @@ Upgrade path: build the appearance stream in `exportPdf.ts` using pdf-lib's `emb
 - Real existing-text edit. Annotation overlay positioning stays flexible enough to host a future `contentEditable`.
 - OCR (Tesseract.wasm).
 - Real-time collab. UUIDs make annotations CRDT-friendly for a future Yjs integration.
-- Signature `/AP` appearance stream (see Honesty callout above).
+- Signature `/AP` appearance stream (see Honesty callout above) — the only meaningful deferral left in the editor's annotation pipeline.
 - Flatten form action.
 - Unlock (password — needs an encrypted PDF fixture pdf-lib can't produce).
+- Compact UI toggle (`:root` is hard-coded to 17px; a `body.compact` class is a one-day add when a user asks).
+- Pan re-anchor on zoom change (the pan offset is reset on fit-zoom but not on manual zoom-in; if a user reports a "jump on zoom" we'll add the re-anchor).
+- Per-page thumbnail height measurement (placeholders use an estimated row height; for a 1000-page doc with mixed aspect ratios the scrollbar will be off by a few percent).
 
 ## Open questions for implementation planning
 

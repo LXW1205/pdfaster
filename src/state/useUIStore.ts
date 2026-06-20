@@ -12,10 +12,16 @@ type State = {
   pageIndex: number;
   zoom: number;
   rotation: 0 | 90 | 180 | 270;
+  // ponytail: cheatsheet overlay visibility. Wired by the `?` shortcut
+  // and a discoverability button in the toolbar. The store is the
+  // single source of truth so the Cheatsheet component can mount
+  // at the editor's root and read/write it without prop-drilling.
+  cheatsheetOpen: boolean;
   setActiveTool: (t: ToolId) => void;
   setPageIndex: (i: number) => void;
   setZoom: (z: number) => void;
   setRotation: (r: 0 | 90 | 180 | 270) => void;
+  setCheatsheetOpen: (b: boolean) => void;
 };
 
 // ponytail: `select` is the no-op default. Phase 6 wires the rest
@@ -27,8 +33,10 @@ export const useUIStore = create<State>((set) => ({
   pageIndex: 0,
   zoom: 1.0,
   rotation: 0,
+  cheatsheetOpen: false,
   setActiveTool: (t) => set({ activeTool: t }),
   setPageIndex: (i) => set({ pageIndex: i }),
   setZoom: (z) => set({ zoom: z }),
   setRotation: (r) => set({ rotation: r }),
+  setCheatsheetOpen: (b) => set({ cheatsheetOpen: b }),
 }));

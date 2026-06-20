@@ -7,7 +7,7 @@ import type { ReactNode } from 'react';
 // the tool pages.
 export function Container({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
-    <div className={`mx-auto w-full max-w-4xl px-6 ${className}`}>
+    <div className={`mx-auto w-full max-w-4xl px-8 ${className}`}>
       {children}
     </div>
   );

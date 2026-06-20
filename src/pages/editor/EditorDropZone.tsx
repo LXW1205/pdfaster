@@ -62,7 +62,7 @@ export default function EditorDropZone({ onFile, error, hint }: Props) {
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       className={[
-        'flex h-full w-full flex-col items-center justify-center gap-6 p-8 transition-colors',
+        'flex h-full w-full flex-col items-center justify-center gap-6 p-10 transition-colors',
         'border-2 border-dashed',
         isDragging ? 'border-secondary bg-primary/10' : 'border-primary/70',
       ].join(' ')}
@@ -72,7 +72,7 @@ export default function EditorDropZone({ onFile, error, hint }: Props) {
         <p className="text-sm text-ink/60">or</p>
 
         <label
-          className="inline-flex cursor-pointer items-center justify-center rounded-md bg-primary px-5 py-3 text-base font-semibold text-ink shadow-sm transition-colors hover:bg-secondary hover:text-bg focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 focus-within:ring-offset-bg"
+          className="inline-flex cursor-pointer items-center justify-center rounded-md bg-primary px-6 py-3 text-lg font-semibold text-ink shadow-sm transition-colors hover:bg-secondary hover:text-bg focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 focus-within:ring-offset-bg"
         >
           Choose a PDF
           <input

@@ -1,5 +1,16 @@
 @import "./styles/theme.css";
 
+/* ponytail: base font size 17px. Every Tailwind `text-*` utility is
+ * rem-based, so this single line bumps every text element by ~6%.
+ * Comfortable for the editor annotation work without becoming
+ * cartoony. Upgrade path to a Compact UI: add a class on body that
+ * overrides the root font size to a smaller value, and toggle the
+ * class from a small settings store. YAGNI today; revisit when an
+ * explicit user complaint lands. */
+:root {
+  font-size: 17px;
+}
+
 body {
   margin: 0;
   font-family: var(--font-sans);

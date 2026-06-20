@@ -19,8 +19,8 @@ export function ToolPicker() {
           onClick={() => setActive(t.tool)}
           className={
             active === t.tool
-              ? 'rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-ink'
-              : 'rounded-md border border-ink/30 px-3 py-1.5 text-sm font-medium text-ink/70 hover:bg-ink/5'
+              ? 'rounded-md bg-primary px-3 py-2 text-base font-medium text-ink'
+              : 'rounded-md border border-ink/30 px-3 py-2 text-base font-medium text-ink/70 hover:bg-ink/5'
           }
         >
           {t.label}

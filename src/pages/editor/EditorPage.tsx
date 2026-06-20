@@ -22,12 +22,23 @@
 //      signature tool is active.
 //   5. Close button: in the toolbar. Clears the session and
 //      the document.
-import { useEffect, useMemo, useRef, useState } from 'react';
+//
+// Phase 8 additions (quality-of-life polish):
+//   1. Pan: hold Space + drag, or middle-mouse-drag, to pan the
+//      canvas. The transform lives on a wrapper div; resets when
+//      the document changes.
+//   2. Fit-zoom: container ref + onFit callback. The toolbar's
+//      Fit button + `0` shortcut both call the same callback,
+//      which measures the container and the page's natural size.
+//   3. Cheatsheet: <Cheatsheet /> is mounted at the editor's
+//      root; the `?` shortcut and the toolbar's discoverability
+//      button both toggle the overlay.
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist';
 import EditorDropZone from './EditorDropZone';
 import { useEditorStore } from '../../state/useEditorStore';
 import { useUIStore } from '../../state/useUIStore';
-import { makeViewport, type Viewport } from '../../lib/coords';
+import { makeViewport, fitZoom, type Viewport } from '../../lib/coords';
 import { renderPageToCanvas } from '../../lib/pdf-render';
 import { exportPdf } from '../../editor/exportPdf';
 import { downloadBytes } from '../../lib/download';
@@ -37,6 +48,7 @@ import { EditorThumbnails } from '../../editor/EditorThumbnails';
 import { AnnotationOverlay } from '../../editor/AnnotationOverlay';
 import { SignatureOverlay } from '../../editor/SignatureOverlay';
 import { FormOverlay } from '../../editor/FormOverlay';
+import { Cheatsheet } from '../../editor/Cheatsheet';
 import { SessionStore, type SessionRecord } from '../../lib/session-store';
 import type { FormFieldState } from '../../state/form';
 
@@ -450,20 +462,175 @@ function LoadedEditor({
   }
 
   return (
+    <LoadedEditorBody
+      pdf={pdf}
+      fileName={fileName}
+      onError={onError}
+      onExport={handleExport}
+      onClose={onClose}
+    />
+  );
+}
+
+// ponytail: the post-load editor body. Owns the canvas container
+// ref, the pan state, the space-held tracking, the fit-zoom
+// callback, and the Cheatsheet mount. Splitting it out of
+// LoadedEditor keeps LoadedEditor focused on the PDF lifecycle
+// (load / form discovery / export) and the body focused on the
+// interactive surface (pan / fit / cheatsheet).
+function LoadedEditorBody({
+  pdf,
+  fileName,
+  onError,
+  onExport,
+  onClose,
+}: {
+  pdf: PDFDocumentProxy;
+  fileName: string | null;
+  onError: (msg: string) => void;
+  onExport: () => void;
+  onClose: () => void;
+}) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  // ponytail: pan state. `pan` is the rendered transform;
+  // `panStartRef` is the drag start (mouse + pan at pointerdown);
+  // `spaceHeld` + `panning` are the gate flags. The pan is
+  // implicitly reset on document change because LoadedEditor's
+  // `key={bytes.byteLength}` remounts LoadedEditorBody (which
+  // re-initializes this useState to { x: 0, y: 0 }).
+  const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [spaceHeld, setSpaceHeld] = useState(false);
+  const [panning, setPanning] = useState(false);
+  const panStartRef = useRef<{ x: number; y: number; startPan: { x: number; y: number } } | null>(null);
+
+  // ponytail: Space-down tracking. We preventDefault on Space
+  // when not focused on a text input so the browser's default
+  // scroll-jump doesn't fight the pan gesture. `e.repeat` is
+  // filtered so a held Space fires once.
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.code === 'Space' && !e.repeat) {
+        const target = e.target;
+        if (target instanceof HTMLElement) {
+          if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+        }
+        e.preventDefault();
+        setSpaceHeld(true);
+      }
+    }
+    function onKeyUp(e: KeyboardEvent) {
+      if (e.code === 'Space') setSpaceHeld(false);
+    }
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
+    };
+  }, []);
+
+  // ponytail: pan fires on space+drag OR middle-mouse-drag.
+  // The cursor reflects the gate state so the user knows they
+  // can drag. The ref-only start avoids fighting the container's
+  // own overflow scroll.
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (!spaceHeld && e.button !== 1) return;
+    e.preventDefault();
+    setPanning(true);
+    panStartRef.current = { x: e.clientX, y: e.clientY, startPan: pan };
+  };
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!panning || !panStartRef.current) return;
+    const dx = e.clientX - panStartRef.current.x;
+    const dy = e.clientY - panStartRef.current.y;
+    setPan({ x: panStartRef.current.startPan.x + dx, y: panStartRef.current.startPan.y + dy });
+  };
+  const onPointerUp = () => {
+    setPanning(false);
+    panStartRef.current = null;
+  };
+
+  // ponytail: the fit-zoom callback. Reads the container's CSS
+  // size, asks the current page for its natural (zoom=1) size,
+  // and writes the fit zoom into the UI store. The toolbar
+  // recomputes its label via its existing `useUIStore((s) => s.zoom)`
+  // subscription, so the label updates without any extra wiring.
+  // `useCallback` so the toolbar's effect doesn't re-run on every
+  // render.
+  const onFit = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    // The container has p-6 (24px) on each side; subtract that
+    // from the client size to get the actual content area.
+    const availableW = el.clientWidth - 48;
+    const availableH = el.clientHeight - 48;
+    if (availableW <= 0 || availableH <= 0) return;
+    const pageIndex = useUIStore.getState().pageIndex;
+    const rotation = useUIStore.getState().rotation;
+    (async () => {
+      try {
+        const page = await pdf.getPage(pageIndex + 1);
+        const baseVp = page.getViewport({ scale: 1, rotation });
+        const fit = fitZoom(baseVp.width, baseVp.height, { w: availableW, h: availableH });
+        useUIStore.getState().setZoom(fit);
+        // ponytail: reset pan on fit-zoom. After the page
+        // re-scales, the prior pan offset would land in a
+        // different part of the visible area. Cheaper than
+        // re-anchoring on every zoom change. (Ceiling: a user
+        // who pans, then zooms in, will get a "jump" — fine
+        // for v1; the auto-fit path resets explicitly.)
+        setPan({ x: 0, y: 0 });
+      } catch (e) {
+        console.warn('fit-zoom failed', e);
+      }
+    })();
+  }, [pdf]);
+
+  return (
     <>
-      <EditorToolbar pdf={pdf} pageCount={pdf.numPages} fileName={fileName} onExport={handleExport} onClose={onClose} />
+      <Cheatsheet />
+      <EditorToolbar
+        pdf={pdf}
+        pageCount={pdf.numPages}
+        fileName={fileName}
+        onExport={onExport}
+        onClose={onClose}
+        onFit={onFit}
+        onShowCheatsheet={() => useUIStore.getState().setCheatsheetOpen(true)}
+      />
       <div className="flex h-[calc(100svh-3.5rem)]">
         <EditorThumbnails pdf={pdf} />
-        <div className="flex-1 overflow-auto bg-ink/5 p-6">
-          {loadError && (
-            <p
-              role="alert"
-              className="mx-auto mb-4 max-w-md rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700"
-            >
-              {loadError}
-            </p>
-          )}
-          <PageView pdf={pdf} onError={onError} />
+        <div
+          ref={containerRef}
+          data-testid="editor-pane"
+          className="flex-1 overflow-hidden bg-ink/5 p-6"
+          style={{ cursor: spaceHeld || panning ? 'grab' : 'default' }}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+        >
+          {/*
+            ponytail: the pan transform lives on a wrapper. The
+            wrapper is `position: relative` so PageView's absolute
+            children (canvas, overlays) are anchored to the
+            wrapper, not the scroll container. The translate is
+            applied per-pan, not as a CSS variable — the wrapper
+            re-renders cheaply on every pointermove because only
+            the transform style changes.
+          */}
+          <div
+            style={{
+              transform: `translate(${pan.x}px, ${pan.y}px)`,
+              position: 'relative',
+              width: 'fit-content',
+              minWidth: '100%',
+              minHeight: '100%',
+            }}
+          >
+            <PageView pdf={pdf} onError={onError} />
+          </div>
         </div>
       </div>
     </>

@@ -1,34 +1,122 @@
-// ponytail: thumbnails render at a fixed small size (120pt wide)
-// using pdf.js + page.getViewport. Renders all pages up front for
-// a small PDF (a 3-page fixture is the only thing the e2e uses
-// today) and cancels in-flight renders on unmount. Promote to
-// an LRU + visible-window-only renderer when the toolbar / page
-// nav grows a scroll-listener and a 100-page document would
-// otherwise build 100 canvas-backed buttons at module init.
-import { useEffect, useRef } from 'react';
+// ponytail: windowed rendering. Only the page indices within ±BUFFER
+// of the visible window get rendered with a real canvas; the rest are
+// thin placeholder buttons with just the page number. As the user
+// scrolls, new thumbs enter the window and old ones exit (and their
+// pdf.js renderTasks are cancelled by the `cancelled` flag in the
+// Thumbnail effect).
+//
+// The placeholder is a real DOM element with the same height as a
+// real thumb — so the scrollbar's total scrollable height is
+// correct, and clicking a placeholder jumps to the page (handy for
+// 1000-page documents where the user is lost).
+//
+// THUMB_HEIGHT_PT is an estimate: actual heights vary with page
+// aspect ratio. For a more accurate spacer, render a hidden first
+// thumb to measure. The estimate is good enough for v1 — the
+// scrollbar position is correct because the placeholder divs are
+// real DOM elements with the right height. Document the ceiling.
+import { useEffect, useRef, useState } from 'react';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import { useUIStore } from '../state/useUIStore';
 import { makeViewport } from '../lib/coords';
 
 const THUMB_PT = 120;
+// ponytail: visible-window buffer in thumb-rows. ±5 ≈ 11 rows of
+// canvas work at any moment. A 5-page doc renders all 5; a 200-page
+// doc renders ~11. The buffer hides the "scroll a little → wait for
+// thumb to paint" flicker for fast scrollers.
+const BUFFER = 5;
+// ponytail: row height in CSS px. The actual rendered thumb is
+// slightly taller (120 + label ≈ 144), but placeholders only need
+// a height to claim scroll space — picking the canvas height keeps
+// the math simple. Real thumbs sit in an absolute-positioned
+// wrapper that adds the label space.
+const THUMB_HEIGHT_PT = THUMB_PT + 24;
 
 export function EditorThumbnails({ pdf }: { pdf: PDFDocumentProxy }) {
   const pageIndex = useUIStore((s) => s.pageIndex);
   const setPageIndex = useUIStore((s) => s.setPageIndex);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  // ponytail: visibleRange covers [start, end] inclusive. The
+  // initial value is the first `BUFFER * 2 + 1` rows, clamped to
+  // numPages — works for the common case (small PDF, viewport
+  // starts at the top) and the first onScroll() call refines it.
+  const [visibleRange, setVisibleRange] = useState<{ start: number; end: number }>(() => ({
+    start: 0,
+    end: Math.min(pdf.numPages - 1, BUFFER * 2),
+  }));
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const top = el.scrollTop;
+      const h = el.clientHeight;
+      const firstVisible = Math.max(0, Math.floor(top / THUMB_HEIGHT_PT) - BUFFER);
+      const lastVisible = Math.min(pdf.numPages - 1, Math.ceil((top + h) / THUMB_HEIGHT_PT) + BUFFER);
+      setVisibleRange((prev) =>
+        prev.start === firstVisible && prev.end === lastVisible ? prev : { start: firstVisible, end: lastVisible },
+      );
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => el.removeEventListener('scroll', onScroll);
+  }, [pdf.numPages]);
+
+  // ponytail: scroll the active thumb into view when pageIndex
+  // changes externally (toolbar page nav, the jump input). Only
+  // scrolls when the active page is outside the visible area —
+  // otherwise the user's scroll position would jump unexpectedly.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const targetTop = pageIndex * THUMB_HEIGHT_PT;
+    if (targetTop < el.scrollTop || targetTop > el.scrollTop + el.clientHeight - THUMB_HEIGHT_PT) {
+      el.scrollTo({
+        top: targetTop - el.clientHeight / 2 + THUMB_HEIGHT_PT / 2,
+        behavior: 'smooth',
+      });
+    }
+  }, [pageIndex]);
+
   return (
     <aside
+      ref={scrollRef}
       data-testid="editor-thumbnails"
-      className="flex w-36 shrink-0 flex-col gap-2 overflow-y-auto border-r border-ink/10 bg-bg/50 p-2"
+      className="flex w-40 shrink-0 flex-col overflow-y-auto border-r border-ink/10 bg-bg/50 p-2"
     >
-      {Array.from({ length: pdf.numPages }, (_, i) => (
-        <Thumbnail
-          key={i}
-          pdf={pdf}
-          pageIndex={i}
-          active={i === pageIndex}
-          onClick={() => setPageIndex(i)}
-        />
-      ))}
+      <div style={{ height: pdf.numPages * THUMB_HEIGHT_PT, position: 'relative' }}>
+        {Array.from({ length: pdf.numPages }, (_, i) => {
+          const inWindow = i >= visibleRange.start && i <= visibleRange.end;
+          if (!inWindow) {
+            // ponytail: placeholder button keeps the scrollbar
+            // accurate and gives a clickable jump-to-page. The
+            // 40% ink color + tiny font is intentionally quiet —
+            // the user is here to scroll, not read page numbers.
+            return (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setPageIndex(i)}
+                data-testid={`thumb-placeholder-${i}`}
+                className="absolute left-0 right-0 flex items-center justify-center text-xs tabular-nums text-ink/40 hover:bg-ink/5"
+                style={{ top: i * THUMB_HEIGHT_PT, height: THUMB_HEIGHT_PT }}
+              >
+                {i + 1}
+              </button>
+            );
+          }
+          return (
+            <div
+              key={i}
+              className="absolute left-0 right-0"
+              style={{ top: i * THUMB_HEIGHT_PT, height: THUMB_HEIGHT_PT }}
+            >
+              <Thumbnail pdf={pdf} pageIndex={i} active={i === pageIndex} onClick={() => setPageIndex(i)} />
+            </div>
+          );
+        })}
+      </div>
     </aside>
   );
 }

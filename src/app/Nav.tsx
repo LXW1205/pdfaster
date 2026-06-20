@@ -28,7 +28,7 @@ const items = [
 export function Nav() {
   return (
     <header className="sticky top-0 z-10 border-b border-ink/10 bg-bg/85 backdrop-blur supports-[backdrop-filter]:bg-bg/70">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-6 py-3">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-8 py-3">
         <Link to="/" className="text-base font-semibold tracking-tight text-ink">
           pdfaster
         </Link>
@@ -39,8 +39,8 @@ export function Nav() {
               to={it.to}
               className={({ isActive }) =>
                 isActive
-                  ? 'rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-ink'
-                  : 'rounded-md px-3 py-1.5 text-sm font-medium text-ink/70 hover:bg-ink/5 hover:text-ink'
+                  ? 'rounded-md bg-primary px-4 py-2 text-base font-medium text-ink'
+                  : 'rounded-md px-4 py-2 text-base font-medium text-ink/70 hover:bg-ink/5 hover:text-ink'
               }
             >
               {it.label}
