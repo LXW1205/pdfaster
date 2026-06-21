@@ -6,16 +6,32 @@
 import { test, expect } from '@playwright/test';
 
 test('a11y: every interactive control on /, /editor, /tools/merge is reachable by role', async ({ page }) => {
-  // Landing: 2 links (Open the editor, Tools), 12 nav links.
+  // Landing: 2 landing links (Open the editor, Tools) + 1 brand link.
   await page.goto('/');
   await expect(page.getByRole('heading', { name: /never leaves your browser/i })).toBeVisible();
   await expect(page.getByRole('link', { name: /open the editor/i })).toBeVisible();
   await expect(page.getByRole('link', { name: /^tools$/i })).toBeVisible();
-  await expect(page.getByRole('navigation', { name: /main/i })).toBeVisible();
-  // The nav has 12 items (1 editor + 11 tool pages). The brand link
-  // is rendered as a sibling of the nav, not inside it (visible
-  // above the menu on the left of the bar).
-  await expect(page.getByRole('navigation', { name: /main/i }).getByRole('link')).toHaveCount(12);
+
+  // The main nav: 1 Editor link + 3 category buttons (dropdowns).
+  // The dropdown MENU items are not in the DOM until the dropdown
+  // opens; we open each one to verify the menu items are reachable.
+  const mainNav = page.getByRole('navigation', { name: /main/i });
+  await expect(mainNav).toBeVisible();
+  await expect(mainNav.getByRole('link')).toHaveCount(1); // Editor only
+
+  // Open each category dropdown and verify the menu items are reachable.
+  for (const label of ['Organize', 'Modify', 'Convert']) {
+    await mainNav.getByRole('button', { name: new RegExp(`^${label}`, 'i') }).click();
+    const menu = mainNav.getByRole('menu', { name: new RegExp(label, 'i') });
+    await expect(menu).toBeVisible();
+    // Every menu item has a role=menuitem link.
+    const items = menu.getByRole('menuitem');
+    const count = await items.count();
+    expect(count).toBeGreaterThan(0);
+    // Close by pressing Escape.
+    await page.keyboard.press('Escape');
+    await expect(menu).toBeHidden();
+  }
 
   // Editor (pre-load): drop zone is a region; the hidden file input
   // is a labeled control (file inputs are not `textbox` per ARIA,
