@@ -24,11 +24,11 @@ test('qol: bigger UI + virtualized thumbs + zoom-to-fit + tool shortcuts + cheat
   await page.goto('/editor');
   await page.locator('input[type="file"]').setInputFiles(path.resolve(__dirname, 'fixtures/3page.pdf'));
 
-  // 1. Bigger UI: root font-size is 17px. Every Tailwind `text-*`
+  // 1. Bigger UI: root font-size is 18px. Every Tailwind `text-*`
   //    utility is rem-based, so the single :root rule cascades to
   //    every text element on the page.
   const rootFontSize = await page.evaluate(() => getComputedStyle(document.documentElement).fontSize);
-  expect(rootFontSize).toBe('17px');
+  expect(rootFontSize).toBe('18px');
 
   // 2. Virtualized thumbs: the 3-page fixture fits in the visible
   //    window (BUFFER * 2 + 1 = 11 rows), so all 3 render with the

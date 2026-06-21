@@ -112,7 +112,7 @@ function NavDropdown({ category, currentPath }: { category: NavCategory; current
 export function Nav() {
   const location = useLocation();
   return (
-    <header className="sticky top-0 z-10 border-b border-ink/10 bg-bg/85 backdrop-blur supports-[backdrop-filter]:bg-bg/70">
+    <header className="sticky top-0 z-30 border-b border-ink/10 bg-bg/85 backdrop-blur supports-[backdrop-filter]:bg-bg/70">
       <div className="mx-auto flex max-w-6xl flex-nowrap items-center gap-x-2 px-8 py-3">
         <Link to="/" title="Back to home" className="mr-2 shrink-0 text-base font-semibold tracking-tight text-ink">
           pdfaster
