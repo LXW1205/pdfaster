@@ -43,6 +43,19 @@ export const router = createBrowserRouter([
           return { Component: m.default };
         },
       },
+      // ponytail: phase 10 — Extract. Sibling to Split: Extract
+      // accepts non-contiguous page selections (single pages +
+      // multiple ranges), Split takes one contiguous range. Same
+      // pdf-lib primitive (copyPages), different UX. Lazy chunk is
+      // its own so a Split user who never extracts doesn't pay for
+      // parseRangeSpec + the larger page list.
+      {
+        path: 'tools/extract',
+        lazy: async () => {
+          const m = await import('../pages/tools/ExtractPage');
+          return { Component: m.default };
+        },
+      },
       {
         path: 'tools/delete-pages',
         lazy: async () => {

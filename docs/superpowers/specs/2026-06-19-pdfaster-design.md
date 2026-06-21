@@ -1,7 +1,7 @@
 # pdfaster — Design Spec
 
-- **Date:** 2026-06-19 (v1 design) · 2026-06-20 (phase 7 — polish + remaining features) · 2026-06-20 (phase 8 — quality-of-life polish) · 2026-06-20 (phase 9 — final QoL)
-- **Status:** v1 shipped · phase 7 closed the polish + remaining-features phase · phase 8 ships the QoL polish · phase 9 closes the final-QoL batch
+- **Date:** 2026-06-19 (v1 design) · 2026-06-20 (phase 7 — polish + remaining features) · 2026-06-20 (phase 8 — quality-of-life polish) · 2026-06-20 (phase 9 — final QoL) · 2026-06-21 (phase 10 — Extract tool)
+- **Status:** v1 shipped · phase 7 closed the polish + remaining-features phase · phase 8 ships the QoL polish · phase 9 closes the final-QoL batch · phase 10 adds the **Extract** tool (non-contiguous page selection)
 - **Reference:** https://pdfshelter.com/
 
 ## Goal
@@ -23,7 +23,7 @@ React 19 · Vite · TypeScript · `pdfjs-dist@6.0.227` (pinned, lazy) · `pdf-li
 
 - `/` — landing + tool picker
 - `/editor` — the editor
-- `/tools/:slug` — merge, split, delete-pages, jpg-to-pdf, pdf-to-jpg, compress, reorder, rotate, crop, watermark, page-numbers
+- `/tools/:slug` — merge, split, extract, delete-pages, jpg-to-pdf, pdf-to-jpg, compress, reorder, rotate, crop, watermark, page-numbers
 
 ## Architecture
 
@@ -143,6 +143,7 @@ The suite follows PDFShelter's lead, expanded with client-side-feasible picks fr
 
 - **Merge:** `copyPages` from each source into a new `PDFDocument`. (Phase 5b.)
 - **Split:** page-range UI → `copyPages` selected indices into a new `PDFDocument`. (Phase 5c.)
+- **Extract:** single pages or non-contiguous ranges (e.g. `1, 3, 5-7`) → `copyPages` selected indices into a new `PDFDocument`. Power-user version of Split for when the desired pages aren't contiguous. (Phase 10.)
 - **Delete pages:** `removePage` from highest index downward. *ponytail: avoids index-shift bugs.* (Phase 5c.)
 - **JPG → PDF:** `embedJpg` per image, one page per image. (Phase 5c.)
 - **PDF → JPG:** pdf.js render each page → `canvas.toBlob('image/jpeg')`; show a grid of previews with per-page download. (Phase 5c.)
@@ -163,7 +164,7 @@ The suite follows PDFShelter's lead, expanded with client-side-feasible picks fr
 ## Testing
 
 - **Vitest** — `lib/coords.ts` round-trips, registry CRUD, form write/read, pdf-lib wrappers. *ponytail: only the gnarly logic.*
-- **Playwright e2e (19 tests, all green)** — load sample PDF → draw highlight + free-draw → fill a form field → draw a signature → export → re-open exported in pdf.js → assert annotations present + form value persisted. Plus: worker URL assertion, session restore, a11y smoke (landing/editor/merge page), and the round-trip checks for each tool page.
+- **Playwright e2e (28 tests, all green)** — load sample PDF → draw highlight + free-draw → fill a form field → draw a signature → export → re-open exported in pdf.js → assert annotations present + form value persisted. Plus: worker URL assertion, session restore, a11y smoke (landing/editor/merge page), and the round-trip checks for each tool page. Phase 10 adds two Extract tests (checkbox-list happy path + range-input short path).
 - **Visual** — snapshot 4 zoom levels on a known page. *ponytail: 4 levels not exhaustive; expand when regressions appear.*
 - **Demo** — `lib/coords.ts` ships a runnable `demo()` self-check (asserts round-trip on fuzzed points). *ponytail: one runnable check behind the gnarliest module, no test framework for it.*
 

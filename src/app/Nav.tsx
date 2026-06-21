@@ -17,6 +17,7 @@ const categories: NavCategory[] = [
     items: [
       { to: '/tools/merge',         label: 'Merge',        description: 'Combine multiple PDFs into one' },
       { to: '/tools/split',         label: 'Split',        description: 'Extract a range of pages into a new PDF' },
+      { to: '/tools/extract',       label: 'Extract',      description: 'Pick specific pages (single or ranges) into a new PDF' },
       { to: '/tools/delete-pages',  label: 'Delete pages', description: 'Remove selected pages from a PDF' },
       { to: '/tools/reorder',       label: 'Reorder',      description: 'Rearrange the page order of a PDF' },
       { to: '/tools/rotate',        label: 'Rotate',       description: 'Rotate every page by 90°, 180°, or 270°' },
