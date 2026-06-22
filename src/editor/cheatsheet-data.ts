@@ -8,7 +8,7 @@
 import type { ToolId } from '../state/useUIStore';
 
 export const SHORTCUTS: { keys: string[]; desc: string }[] = [
-  { keys: ['V'], desc: 'Select tool' },
+  { keys: ['V'], desc: 'Move / select' },
   { keys: ['H'], desc: 'Highlight' },
   { keys: ['U'], desc: 'Underline' },
   { keys: ['T'], desc: 'Strikethrough' },
@@ -22,6 +22,10 @@ export const SHORTCUTS: { keys: string[]; desc: string }[] = [
   // cheatsheet. (The Escape handler is in Cheatsheet.tsx for the
   // overlay itself, and in AnnotationOverlay.tsx for deselect.)
   { keys: ['Del'], desc: 'Remove selected annotation' },
+  // ponytail: Shift+drag = ¼ speed. Applies to both move and
+  // resize (SelectionHandles reads the same factor). The standard
+  // "precision mode" pattern in design tools.
+  { keys: ['Shift', 'drag'], desc: 'Fine move (¼ speed)' },
   { keys: ['Ctrl', 'Z'], desc: 'Undo' },
   { keys: ['Ctrl', 'Shift', 'Z'], desc: 'Redo' },
   { keys: ['['], desc: 'Previous page' },

@@ -16,7 +16,9 @@ import { useEffect, useState } from 'react';
 import { Container } from '../../components/Container';
 import { FileDropZone } from '../../components/FileDropZone';
 import { PagedPageList } from '../../components/PagedPageList';
+import { PagePreview } from '../../components/PagePreview';
 import { downloadBytes } from '../../lib/download';
+import { usePdfDocument } from '../../lib/hooks/use-pdf-document';
 import { PDFDocument } from 'pdf-lib';
 
 function fmtSize(n: number) {
@@ -32,6 +34,11 @@ export default function ReorderPage() {
   const [result, setResult] = useState<Uint8Array | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // ponytail: one pdf.js proxy per file, shared across every row's
+  // PagePreview. The hook returns null until the proxy loads; rows
+  // render without a preview in the brief moment between file drop
+  // and proxy ready, then the previews appear.
+  const previewPdf = usePdfDocument(file);
 
   useEffect(() => {
     if (!file) return;
@@ -124,6 +131,12 @@ export default function ReorderPage() {
               const origIdx = order[i]!;
               return (
                 <div className="flex items-center gap-3 px-4 py-2 text-sm">
+                  {/* ponytail: a quiet 60px-wide thumbnail on the
+                      left of each row. The preview's height is
+                      derived from the page's aspect ratio at
+                      width=60, so the row's height stays stable
+                      even before the canvas paints. */}
+                  {previewPdf && <PagePreview pdf={previewPdf} pageIndex={i} />}
                   <span className="w-10 font-medium text-ink">{i + 1}.</span>
                   <span className="flex-1 text-ink/80">Page {origIdx + 1}</span>
                   <button

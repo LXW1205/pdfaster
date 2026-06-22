@@ -82,8 +82,15 @@ export function SelectionHandles({
         // The anchor-vs-move axis is therefore: top-edge handles
         // (dy=0) move the top; bottom-edge handles (dy=1) move the
         // bottom. The opposite edge is anchored.
-        const dxPts = (ev.clientX - startCssX) / viewport.zoom;
-        const dyPts = (ev.clientY - startCssY) / viewport.zoom;
+        //
+        // ponytail: shift-to-fine-resize. Same ¼ factor as move
+        // (AnnotationOverlay). Holding Shift during a resize drag
+        // shrinks the step to 1/4 — useful for nudging a handle by
+        // a fraction of a point. Without shift, the step is 1:1
+        // (current behavior).
+        const factor = ev.shiftKey ? 0.25 : 1; // ponytail: Shift = ¼ size step
+        const dxPts = (ev.clientX - startCssX) * factor / viewport.zoom;
+        const dyPts = (ev.clientY - startCssY) * factor / viewport.zoom;
         let { x, y, w, h } = startRect;
         // West (dx=0): the left edge moves with the cursor; width shrinks.
         if (handle.dx === 0) {

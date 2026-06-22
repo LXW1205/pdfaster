@@ -11,7 +11,9 @@ import { useEffect, useState } from 'react';
 import { Container } from '../../components/Container';
 import { FileDropZone } from '../../components/FileDropZone';
 import { PagedPageList } from '../../components/PagedPageList';
+import { PagePreview } from '../../components/PagePreview';
 import { downloadBytes } from '../../lib/download';
+import { usePdfDocument } from '../../lib/hooks/use-pdf-document';
 import { PDFDocument } from 'pdf-lib';
 
 export default function DeletePagesPage() {
@@ -21,6 +23,9 @@ export default function DeletePagesPage() {
   const [result, setResult] = useState<Uint8Array | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // ponytail: one pdf.js proxy per file, shared across every row's
+  // PagePreview. The hook returns null until the proxy loads.
+  const previewPdf = usePdfDocument(file);
 
   // ponytail: pageCount + keep stay at their prior values when
   // `file` is null; the UI hides the page list via `file &&
@@ -136,6 +141,7 @@ export default function DeletePagesPage() {
               const k = keep[i]!;
               return (
                 <div className="flex items-center gap-3 px-4 py-2 text-sm">
+                  {previewPdf && <PagePreview pdf={previewPdf} pageIndex={i} />}
                   <span className="w-10 font-medium text-ink">{i + 1}.</span>
                   <span className="flex-1 text-ink/70">Page {i + 1}</span>
                   <label className="flex items-center gap-2 text-sm text-ink/80">

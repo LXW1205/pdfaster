@@ -279,10 +279,22 @@ export function AnnotationOverlay({ viewport, pageIndex }: Props) {
   // We use window-level pointer events (set up by the click target's
   // onPointerDown) so a drag that leaves the page canvas still
   // tracks the pointer.
+  //
+  // The ref carries the annotation's state at the time of
+  // pointerdown (originalRect / originalPoints). The move handler
+  // reads the LATEST annotation from the store, but computes the
+  // new state as `original + delta` — NOT `current + delta`.
+  // Adding to the current value would compound the delta on every
+  // pointermove (the browser fires many per drag, e.g. 8 in
+  // Playwright's `steps: 8`), so the annotation would drift far
+  // past the cursor. The original-anchored math is the only one
+  // that respects "1 CSS px = 1 PDF pt at zoom=1".
   const moveRef = useRef<{
     annotationId: string;
     startCssX: number;
     startCssY: number;
+    originalRect: RectPts | null;
+    originalPoints: PointPts[] | null;
   } | null>(null);
 
   function startMove(a: Annotation, e: React.PointerEvent) {
@@ -297,6 +309,8 @@ export function AnnotationOverlay({ viewport, pageIndex }: Props) {
       annotationId: a.id,
       startCssX: e.clientX,
       startCssY: e.clientY,
+      originalRect: a.type === 'freedraw' ? null : a.rect,
+      originalPoints: a.type === 'freedraw' ? a.points : null,
     };
   }
 
@@ -358,18 +372,33 @@ export function AnnotationOverlay({ viewport, pageIndex }: Props) {
         // upward, so a positive CSS-px delta in y is a negative
         // PDF-pt delta. Forgetting the sign makes the annotation
         // move the "wrong way" relative to the cursor.
+        //
+        // ponytail: shift-to-fine-move. Holding Shift divides the
+        // CSS-px delta by 4 — the standard "precision mode" in
+        // design tools (Figma, Sketch, Photoshop all use ~1/4 as
+        // the slow-mode step). The same factor applies to resize
+        // in SelectionHandles. The delta is computed in CSS pixels
+        // (where shift is checked) and only then converted to
+        // PDF points, so the user-visible "1 pixel = 1/4 pixel"
+        // math is what they feel.
+        //
+        // The new rect/points are computed from the ORIGINAL
+        // state captured at pointerdown (moveRef.originalRect /
+        // originalPoints) plus the cumulative delta. Anchoring to
+        // the original is the difference between "the annotation
+        // lands where the cursor is" and "the annotation drifts
+        // off the page" — see moveRef's comment for the math.
         const m = moveRef.current;
         if (m) {
-          const a = useEditorStore.getState().annotations.find((x) => x.id === m.annotationId);
-          if (!a) return;
-          const dxPts = (e.clientX - m.startCssX) / viewport.zoom;
-          const dyPts = (e.clientY - m.startCssY) / viewport.zoom;
-          if (a.type === 'freedraw') {
-            const newPoints = a.points.map((p) => ({ x: p.x + dxPts, y: p.y - dyPts }));
-            updateAnnotation(a.id, { points: newPoints });
-          } else {
-            const r = a.rect;
-            updateAnnotation(a.id, { rect: { ...r, x: r.x + dxPts, y: r.y - dyPts } });
+          const factor = e.shiftKey ? 0.25 : 1; // ponytail: Shift = ¼ speed
+          const dxPts = (e.clientX - m.startCssX) * factor / viewport.zoom;
+          const dyPts = (e.clientY - m.startCssY) * factor / viewport.zoom;
+          if (m.originalPoints) {
+            const newPoints = m.originalPoints.map((p) => ({ x: p.x + dxPts, y: p.y - dyPts }));
+            updateAnnotation(m.annotationId, { points: newPoints });
+          } else if (m.originalRect) {
+            const r = m.originalRect;
+            updateAnnotation(m.annotationId, { rect: { ...r, x: r.x + dxPts, y: r.y - dyPts } });
           }
           // ponytail: do NOT update `m.startCssX/Y` — the delta is
           // cumulative from the initial pointerdown, not incremental
