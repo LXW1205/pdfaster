@@ -7,9 +7,15 @@
 // The label on each row's buttons uses the original page number
 // (order[i] + 1) so the user can read "Move page 1 down" before AND
 // after a swap. Same UX as MergePage, which labels by file name.
+//
+// Phase 12: the page list is rendered by PagedPageList (infinite
+// scroll, IntersectionObserver). The 3-page fixture used by the
+// prior e2e renders all 3 rows from the start (initial window = 20)
+// — pagination is a no-op for small docs, which is the right default.
 import { useEffect, useState } from 'react';
 import { Container } from '../../components/Container';
 import { FileDropZone } from '../../components/FileDropZone';
+import { PagedPageList } from '../../components/PagedPageList';
 import { downloadBytes } from '../../lib/download';
 import { PDFDocument } from 'pdf-lib';
 
@@ -103,28 +109,41 @@ export default function ReorderPage() {
             <span className="font-medium text-ink">{file.name}</span>
             <span>{fmtSize(file.size)} · {pageCount} {pageCount === 1 ? 'page' : 'pages'}</span>
           </div>
-          <ul aria-label="Pages" className="divide-y divide-ink/10 rounded-md border border-ink/10">
-            {order.map((origIdx, i) => (
-              <li key={origIdx} className="flex items-center gap-3 px-4 py-2 text-sm">
-                <span className="w-10 font-medium text-ink">{i + 1}.</span>
-                <span className="flex-1 text-ink/80">Page {origIdx + 1}</span>
-                <button
-                  type="button"
-                  onClick={() => move(i, -1)}
-                  disabled={i === 0}
-                  aria-label={`Move page ${origIdx + 1} up`}
-                  className="rounded px-2 py-1 text-ink/60 hover:bg-ink/5 disabled:opacity-30"
-                >↑</button>
-                <button
-                  type="button"
-                  onClick={() => move(i, 1)}
-                  disabled={i === order.length - 1}
-                  aria-label={`Move page ${origIdx + 1} down`}
-                  className="rounded px-2 py-1 text-ink/60 hover:bg-ink/5 disabled:opacity-30"
-                >↓</button>
-              </li>
-            ))}
-          </ul>
+          <PagedPageList
+            count={pageCount}
+            ariaLabel="Pages"
+            className="divide-y divide-ink/10 rounded-md border border-ink/10"
+            // ponytail: key on the original page index (order[i])
+            // — when the user moves pages, the keys follow the
+            // pages, not the rows. Keeps React's identity stable
+            // across moves (the button that was on row 0 is still
+            // on row 0; the same key just resolved to a different
+            // origIdx after the move).
+            getKey={(i) => `reorder-${order[i]}`}
+            renderItem={(i) => {
+              const origIdx = order[i]!;
+              return (
+                <div className="flex items-center gap-3 px-4 py-2 text-sm">
+                  <span className="w-10 font-medium text-ink">{i + 1}.</span>
+                  <span className="flex-1 text-ink/80">Page {origIdx + 1}</span>
+                  <button
+                    type="button"
+                    onClick={() => move(i, -1)}
+                    disabled={i === 0}
+                    aria-label={`Move page ${origIdx + 1} up`}
+                    className="rounded px-2 py-1 text-ink/60 hover:bg-ink/5 disabled:opacity-30"
+                  >↑</button>
+                  <button
+                    type="button"
+                    onClick={() => move(i, 1)}
+                    disabled={i === order.length - 1}
+                    aria-label={`Move page ${origIdx + 1} down`}
+                    className="rounded px-2 py-1 text-ink/60 hover:bg-ink/5 disabled:opacity-30"
+                  >↓</button>
+                </div>
+              );
+            }}
+          />
         </section>
       )}
 

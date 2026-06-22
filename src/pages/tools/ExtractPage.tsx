@@ -4,9 +4,15 @@
 // uncheck what you want to remove. The bulk-action + range-input
 // UX is two ways to do the same thing; the range input is the
 // power-user shortcut.
+//
+// Phase 12: the page list is rendered by PagedPageList (infinite
+// scroll, IntersectionObserver). The 3-page fixture used by the
+// prior e2e renders all 3 rows from the start (initial window = 20)
+// — pagination is a no-op for small docs, which is the right default.
 import { useEffect, useState } from 'react';
 import { Container } from '../../components/Container';
 import { FileDropZone } from '../../components/FileDropZone';
+import { PagedPageList } from '../../components/PagedPageList';
 import { downloadBytes } from '../../lib/download';
 import { PDFDocument } from 'pdf-lib';
 
@@ -170,22 +176,32 @@ export default function ExtractPage() {
               </button>
             </div>
           </div>
-          <ul aria-label="Pages" className="divide-y divide-ink/10 rounded-md border border-ink/10">
-            {selected.map((sel, i) => (
-              <li key={i} className="flex items-center gap-3 px-4 py-2 text-sm">
-                <span className="w-10 font-medium text-ink">{i + 1}.</span>
-                <span className="flex-1 text-ink/70">Page {i + 1} / {pageWidth}×{pageHeight} pt</span>
-                <input
-                  type="checkbox"
-                  checked={sel}
-                  onChange={() => toggle(i)}
-                  aria-label={`Select page ${i + 1}`}
-                  data-testid={`extract-checkbox-${i}`}
-                  className="h-4 w-4 accent-primary"
-                />
-              </li>
-            ))}
-          </ul>
+          <PagedPageList
+            count={pageCount}
+            ariaLabel="Pages"
+            className="divide-y divide-ink/10 rounded-md border border-ink/10"
+            // ponytail: key on `i` (the position in the list). The
+            // rows don't move around, so the index is the stable
+            // identity. Same as the prior <ul key={i}>.
+            getKey={(i) => `extract-${i}`}
+            renderItem={(i) => {
+              const sel = selected[i]!;
+              return (
+                <div className="flex items-center gap-3 px-4 py-2 text-sm">
+                  <span className="w-10 font-medium text-ink">{i + 1}.</span>
+                  <span className="flex-1 text-ink/70">Page {i + 1} / {pageWidth}×{pageHeight} pt</span>
+                  <input
+                    type="checkbox"
+                    checked={sel}
+                    onChange={() => toggle(i)}
+                    aria-label={`Select page ${i + 1}`}
+                    data-testid={`extract-checkbox-${i}`}
+                    className="h-4 w-4 accent-primary"
+                  />
+                </div>
+              );
+            }}
+          />
         </section>
       )}
 

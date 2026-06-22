@@ -16,6 +16,12 @@ export const SHORTCUTS: { keys: string[]; desc: string }[] = [
   { keys: ['E'], desc: 'Ellipse' },
   { keys: ['F'], desc: 'Free draw' },
   { keys: ['S'], desc: 'Signature' },
+  // ponytail: Delete removes the selected annotation. Backspace
+  // also works — some users prefer it. Escape is intentionally
+  // omitted; the user knows Escape, and adding it clutters the
+  // cheatsheet. (The Escape handler is in Cheatsheet.tsx for the
+  // overlay itself, and in AnnotationOverlay.tsx for deselect.)
+  { keys: ['Del'], desc: 'Remove selected annotation' },
   { keys: ['Ctrl', 'Z'], desc: 'Undo' },
   { keys: ['Ctrl', 'Shift', 'Z'], desc: 'Redo' },
   { keys: ['['], desc: 'Previous page' },

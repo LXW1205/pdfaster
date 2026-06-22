@@ -2,9 +2,15 @@
 // operation-specific UI: one row per page, checkbox on the right,
 // quick "Select all/none" pair above. Default state: all checked
 // (keep all) — the destructive action is opt-in by unchecking.
+//
+// Phase 12: the page list is rendered by PagedPageList (infinite
+// scroll, IntersectionObserver). The 3-page fixture used by the
+// prior e2e renders all 3 rows from the start (initial window = 20)
+// — pagination is a no-op for small docs, which is the right default.
 import { useEffect, useState } from 'react';
 import { Container } from '../../components/Container';
 import { FileDropZone } from '../../components/FileDropZone';
+import { PagedPageList } from '../../components/PagedPageList';
 import { downloadBytes } from '../../lib/download';
 import { PDFDocument } from 'pdf-lib';
 
@@ -118,24 +124,34 @@ export default function DeletePagesPage() {
               </button>
             </div>
           </div>
-          <ul aria-label="Pages" className="divide-y divide-ink/10 rounded-md border border-ink/10">
-            {keep.map((k, i) => (
-              <li key={i} className="flex items-center gap-3 px-4 py-2 text-sm">
-                <span className="w-10 font-medium text-ink">{i + 1}.</span>
-                <span className="flex-1 text-ink/70">Page {i + 1}</span>
-                <label className="flex items-center gap-2 text-sm text-ink/80">
-                  <input
-                    type="checkbox"
-                    checked={k}
-                    onChange={() => toggle(i)}
-                    data-testid={`delete-pages-checkbox-${i}`}
-                    className="h-4 w-4 accent-primary"
-                  />
-                  <span>{k ? 'Keep' : 'Remove'}</span>
-                </label>
-              </li>
-            ))}
-          </ul>
+          <PagedPageList
+            count={pageCount}
+            ariaLabel="Pages"
+            className="divide-y divide-ink/10 rounded-md border border-ink/10"
+            // ponytail: key on `i` (the position in the list). The
+            // rows don't move around, so the index is the stable
+            // identity. Same as the prior <ul key={i}>.
+            getKey={(i) => `delete-${i}`}
+            renderItem={(i) => {
+              const k = keep[i]!;
+              return (
+                <div className="flex items-center gap-3 px-4 py-2 text-sm">
+                  <span className="w-10 font-medium text-ink">{i + 1}.</span>
+                  <span className="flex-1 text-ink/70">Page {i + 1}</span>
+                  <label className="flex items-center gap-2 text-sm text-ink/80">
+                    <input
+                      type="checkbox"
+                      checked={k}
+                      onChange={() => toggle(i)}
+                      data-testid={`delete-pages-checkbox-${i}`}
+                      className="h-4 w-4 accent-primary"
+                    />
+                    <span>{k ? 'Keep' : 'Remove'}</span>
+                  </label>
+                </div>
+              );
+            }}
+          />
         </section>
       )}
 

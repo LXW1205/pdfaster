@@ -4,18 +4,25 @@
 // for free-draw). Dispatches draft logic based on the active tool's
 // `shape` meta.
 //
+// Phase 11: the overlay now also handles the `select` tool. Three
+// dispatch branches: `rect` (draft a new highlight/rect/etc.),
+// `polyline` (draft free-draw), and `select` (click an annotation
+// to select + drag to move, drag handles to resize, Delete/Backspace
+// to remove, Escape to deselect, click empty space to deselect).
+//
 // The overlay subscribes to its own slice (the `annotations` array)
 // — a bare `useEditorStore((s) => s.annotations)` selector is fine
 // because zustand returns the same reference when the array is
 // unchanged. Filter + sort happens in a `useMemo` with primitive
 // deps so React doesn't re-render on every commit. Promote to a
 // per-page-index selector when annotations grow past a few hundred.
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { useEditorStore } from '../state/useEditorStore';
 import { useUIStore, type ToolId } from '../state/useUIStore';
 import { AnnotationRegistry } from '../annotations/registry';
 import type { Annotation, AnnotationTypeMeta, PointPts, RectPts, Rgb } from '../annotations/types';
 import { cssToPdf, pdfToCss, type Viewport } from '../lib/coords';
+import { SelectionHandles } from './SelectionHandles';
 
 type Props = { viewport: Viewport; pageIndex: number };
 
@@ -43,6 +50,10 @@ function currentColorForTool(
 export function AnnotationOverlay({ viewport, pageIndex }: Props) {
   const annotations = useEditorStore((s) => s.annotations);
   const addAnnotation = useEditorStore((s) => s.addAnnotation);
+  const updateAnnotation = useEditorStore((s) => s.updateAnnotation);
+  const removeAnnotation = useEditorStore((s) => s.removeAnnotation);
+  const selectedId = useEditorStore((s) => s.selectedId);
+  const setSelectedId = useEditorStore((s) => s.setSelectedId);
   const activeTool = useUIStore((s) => s.activeTool);
 
   // ponytail: resolve the active tool's meta once per activeTool change.
@@ -79,6 +90,18 @@ export function AnnotationOverlay({ viewport, pageIndex }: Props) {
     () => currentColorForTool(activeTool, toolColors),
     [activeTool, toolColors],
   );
+
+  // ponytail: the selected annotation (derived from `selectedId` +
+  // the annotations array). The visual is per-page: the overlay
+  // renders the selection chrome only when the selected annotation
+  // lives on the current page. Cross-page selection still works
+  // (the Delete keypress handler acts on the global id) but
+  // there's no visible affordance until the user navigates back.
+  const selected = useMemo<Annotation | null>(
+    () => (selectedId ? annotations.find((a) => a.id === selectedId) ?? null : null),
+    [selectedId, annotations],
+  );
+  const selectedOnPage = selected && selected.pageIndex === pageIndex ? selected : null;
 
   const localCoords = (e: React.PointerEvent<HTMLDivElement>) => {
     const r = e.currentTarget.getBoundingClientRect();
@@ -219,6 +242,14 @@ export function AnnotationOverlay({ viewport, pageIndex }: Props) {
   // pad on top of the page) — letting AnnotationOverlay capture
   // would steal strokes from the pad.
   const isTool = meta !== null && activeTool !== 'signature';
+  const isSelectMode = activeTool === 'select';
+
+  // ponytail: the overlay needs to receive pointer events in two
+  // cases — an annotation tool is active (draft a new annotation)
+  // OR the select tool is active (click empty space to deselect).
+  // The signature pad is the only tool that locks out the overlay
+  // entirely (it owns a modal surface).
+  const interactive = isTool || isSelectMode;
 
   // ponytail: if the user clicks a different tool while a draft is
   // in flight, the visual draft would otherwise stay on screen until
@@ -240,26 +271,136 @@ export function AnnotationOverlay({ viewport, pageIndex }: Props) {
     };
   }, []);
 
+  // ponytail: a move drag in flight. Refs don't trigger re-renders;
+  // the move handler updates the annotation via `updateAnnotation`,
+  // which triggers a re-render through the normal subscription
+  // path. The overlay's onPointerMove dispatches to `moveCurrentMove`
+  // if a move is active; the overlay's onPointerUp clears the ref.
+  // We use window-level pointer events (set up by the click target's
+  // onPointerDown) so a drag that leaves the page canvas still
+  // tracks the pointer.
+  const moveRef = useRef<{
+    annotationId: string;
+    startCssX: number;
+    startCssY: number;
+  } | null>(null);
+
+  function startMove(a: Annotation, e: React.PointerEvent) {
+    // ponytail: stop propagation so the overlay's onPointerDown
+    // doesn't see the click as "empty space" and deselect. The
+    // click target owns the gesture.
+    e.stopPropagation();
+    e.preventDefault();
+    setSelectedId(a.id);
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    moveRef.current = {
+      annotationId: a.id,
+      startCssX: e.clientX,
+      startCssY: e.clientY,
+    };
+  }
+
+  // ponytail: keyboard handler for the select tool. Delete /
+  // Backspace removes the selected annotation; Escape deselects.
+  // Skipped when an input/textarea/contenteditable is focused so
+  // typing in the page-jump input or the find bar doesn't remove
+  // an annotation the user can't see. The cheatsheet's Escape
+  // handler is a separate effect that closes the cheatsheet when
+  // open — both handlers are window-level and don't conflict.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const target = e.target;
+      if (target instanceof HTMLElement) {
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+          return;
+        }
+      }
+      if (!selectedId) return;
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        removeAnnotation(selectedId);
+        setSelectedId(null);
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        setSelectedId(null);
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [selectedId, removeAnnotation, setSelectedId]);
+
   return (
     <div
       data-testid="annotation-overlay"
       data-active-tool={activeTool}
       onPointerDown={(e) => {
+        // ponytail: select mode — clicks on empty space deselect.
+        // A click on an annotation's click target fires that child's
+        // onPointerDown (which calls startMove and stopPropagation);
+        // this branch only runs when the click lands directly on the
+        // overlay div (`e.target === e.currentTarget`).
+        if (isSelectMode) {
+          if (e.target === e.currentTarget) {
+            setSelectedId(null);
+          }
+          return;
+        }
         if (!isTool) return;
         if (meta.shape === 'rect') startRect(e);
         else startPolyline(e);
       }}
       onPointerMove={(e) => {
+        // ponytail: a move drag is in flight. Compute the delta in
+        // CSS pixels, convert to PDF points via /zoom, and translate
+        // either the rect (for rect-based types) or every point (for
+        // free-draw). Width / height are untouched on a move. The
+        // y axis is INVERTED: CSS y grows downward, PDF y grows
+        // upward, so a positive CSS-px delta in y is a negative
+        // PDF-pt delta. Forgetting the sign makes the annotation
+        // move the "wrong way" relative to the cursor.
+        const m = moveRef.current;
+        if (m) {
+          const a = useEditorStore.getState().annotations.find((x) => x.id === m.annotationId);
+          if (!a) return;
+          const dxPts = (e.clientX - m.startCssX) / viewport.zoom;
+          const dyPts = (e.clientY - m.startCssY) / viewport.zoom;
+          if (a.type === 'freedraw') {
+            const newPoints = a.points.map((p) => ({ x: p.x + dxPts, y: p.y - dyPts }));
+            updateAnnotation(a.id, { points: newPoints });
+          } else {
+            const r = a.rect;
+            updateAnnotation(a.id, { rect: { ...r, x: r.x + dxPts, y: r.y - dyPts } });
+          }
+          // ponytail: do NOT update `m.startCssX/Y` — the delta is
+          // cumulative from the initial pointerdown, not incremental
+          // from the last pointermove. Incremental math would drift
+          // if a single pointermove was dropped.
+          return;
+        }
         if (!isTool) return;
         if (draftRef.current?.kind === 'rect') moveRect(e);
         else if (draftRef.current?.kind === 'polyline') movePolyline(e);
       }}
       onPointerUp={(e) => {
+        if (moveRef.current) {
+          if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+            e.currentTarget.releasePointerCapture(e.pointerId);
+          }
+          moveRef.current = null;
+          return;
+        }
         if (!isTool) return;
         if (draftRef.current?.kind === 'rect') endRect(e);
         else if (draftRef.current?.kind === 'polyline') endPolyline(e);
       }}
       onPointerCancel={(e) => {
+        if (moveRef.current) {
+          if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+            e.currentTarget.releasePointerCapture(e.pointerId);
+          }
+          moveRef.current = null;
+          return;
+        }
         if (e.currentTarget.hasPointerCapture(e.pointerId)) {
           e.currentTarget.releasePointerCapture(e.pointerId);
         }
@@ -269,12 +410,38 @@ export function AnnotationOverlay({ viewport, pageIndex }: Props) {
       style={{
         position: 'absolute',
         inset: 0,
-        cursor: isTool ? 'crosshair' : 'default',
+        cursor: isSelectMode ? 'default' : isTool ? 'crosshair' : 'default',
         touchAction: 'none',
-        pointerEvents: isTool ? 'auto' : 'none',
+        pointerEvents: interactive ? 'auto' : 'none',
       }}
     >
-      {onPage.map((a) => <AnnotationView key={a.id} a={a} viewport={viewport} />)}
+      {onPage.map((a) => (
+        <Fragment key={a.id}>
+          <AnnotationView a={a} viewport={viewport} />
+          {isSelectMode && (
+            <SelectionClickTarget
+              annotation={a}
+              viewport={viewport}
+              onPointerDown={(e) => startMove(a, e)}
+            />
+          )}
+        </Fragment>
+      ))}
+      {selectedOnPage && selectedOnPage.type !== 'freedraw' && (
+        <SelectionHandles
+          annotation={selectedOnPage as Extract<Annotation, { type: 'highlight' | 'underline' | 'strikethrough' | 'rectangle' | 'ellipse' | 'signature' }>}
+          viewport={viewport}
+        />
+      )}
+      {selectedOnPage && selectedOnPage.type === 'freedraw' && (
+        // ponytail: free-draw move-only in v1. The visual is a
+        // dashed path along the polyline (no resize handles).
+        // Dragging the dashed path (via the click target) translates
+        // every point; the dashed visual updates because the
+        // annotation's points change. The resize ceiling is
+        // documented in the spec's "deferred" list.
+        <FreedrawSelectionOutline annotation={selectedOnPage} viewport={viewport} />
+      )}
       {draft?.kind === 'rect' && draft.tool === activeTool && (
         <RectView
           rect={draft.rect}
@@ -456,6 +623,99 @@ function PolylineView({
       height={viewport.cssHeight}
     >
       <path d={d} fill="none" stroke={`rgb(${Math.round(cssColor[0] * 255)}, ${Math.round(cssColor[1] * 255)}, ${Math.round(cssColor[2] * 255)})`} strokeOpacity={cssOpacity} strokeWidth={cssStroke} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+// ponytail: invisible click + drag target for an annotation in
+// select mode. The actual visual (RectView / PolylineView /
+// SignatureView) is `pointer-events: none`, so the user can't
+// click on it directly. The click target sits on top of the
+// visual, is invisible (transparent), and re-enables pointer
+// events. Clicking it sets the selected id and starts a move
+// drag (in the parent overlay's onPointerDown / onPointerMove).
+// For free-draw, the click target is the bounding box of the
+// polyline — clicking inside the bbox (even off the actual
+// stroke) selects the annotation. This is the standard
+// paint-program UX floor; promote to a stroke-tight hit-test
+// when a user complains about clicking "near" a stroke.
+function SelectionClickTarget({
+  annotation,
+  viewport,
+  onPointerDown,
+}: {
+  annotation: Annotation;
+  viewport: Viewport;
+  onPointerDown: (e: React.PointerEvent) => void;
+}) {
+  // Compute the CSS rect for the click target. Free-draw uses
+  // the bounding box of all points; everything else uses the
+  // annotation's `rect` field. The two branches converge on
+  // the same four locals.
+  let minX: number, maxX: number, minY: number, maxY: number;
+  if (annotation.type === 'freedraw') {
+    minX = annotation.points[0]!.x;
+    maxX = annotation.points[0]!.x;
+    minY = annotation.points[0]!.y;
+    maxY = annotation.points[0]!.y;
+    for (const p of annotation.points) {
+      if (p.x < minX) minX = p.x;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.y > maxY) maxY = p.y;
+    }
+  } else {
+    const r = annotation.rect;
+    minX = Math.min(r.x, r.x + r.w);
+    maxX = Math.max(r.x, r.x + r.w);
+    minY = Math.min(r.y, r.y + r.h);
+    maxY = Math.max(r.y, r.y + r.h);
+  }
+  const a = pdfToCss(viewport, minX, minY);
+  const b = pdfToCss(viewport, maxX, maxY);
+  const left = Math.min(a.x, b.x);
+  const top = Math.min(a.y, b.y);
+  const width = Math.abs(b.x - a.x);
+  const height = Math.abs(b.y - a.y);
+  return (
+    <div
+      data-testid="annotation-click-target"
+      data-annotation-id={annotation.id}
+      onPointerDown={onPointerDown}
+      style={{
+        position: 'absolute',
+        left,
+        top,
+        width,
+        height,
+        cursor: 'move',
+        touchAction: 'none',
+      }}
+    />
+  );
+}
+
+// ponytail: the selection visual for a free-draw annotation. A
+// dashed path along the polyline. No resize handles (resize is
+// deferred for free-draw — see spec). The outline is `pointer-
+// events: none` so it doesn't steal the click target's drag.
+function FreedrawSelectionOutline({
+  annotation,
+  viewport,
+}: {
+  annotation: Extract<Annotation, { type: 'freedraw' }>;
+  viewport: Viewport;
+}) {
+  const cssPoints = annotation.points.map((p) => pdfToCss(viewport, p.x, p.y));
+  const d = cssPoints.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(' ');
+  return (
+    <svg
+      data-testid="freedraw-selection-outline"
+      style={{ position: 'absolute', left: 0, top: 0, width: viewport.cssWidth, height: viewport.cssHeight, pointerEvents: 'none', overflow: 'visible' }}
+      width={viewport.cssWidth}
+      height={viewport.cssHeight}
+    >
+      <path d={d} fill="none" stroke="var(--color-primary)" strokeWidth={1} strokeDasharray="4 4" />
     </svg>
   );
 }

@@ -10,11 +10,14 @@
 // correct, and clicking a placeholder jumps to the page (handy for
 // 1000-page documents where the user is lost).
 //
-// THUMB_HEIGHT_PT is an estimate: actual heights vary with page
-// aspect ratio. For a more accurate spacer, render a hidden first
-// thumb to measure. The estimate is good enough for v1 — the
-// scrollbar position is correct because the placeholder divs are
-// real DOM elements with the right height. Document the ceiling.
+// Phase 12: measure-once height. The slot is positioned with
+// `thumbHeight` (a useState seeded by the first page's natural
+// aspect ratio). THUMB_HEIGHT_PT stays as the initial fallback so
+// the very first paint has correct geometry. Mixed-aspect PDFs
+// (rare) use the first page's ratio for every slot — the last few
+// thumbs in a mixed-aspect doc may still overlap. Document the
+// ceiling. Promote to per-page measurement when a real complaint
+// lands.
 //
 // Phase 9: drag-to-reorder. The user can drag a thumb to a new
 // position to reorder the document. The move is destructive but
@@ -34,17 +37,25 @@ const THUMB_PT = 120;
 // doc renders ~11. The buffer hides the "scroll a little → wait for
 // thumb to paint" flicker for fast scrollers.
 const BUFFER = 5;
-// ponytail: row height in CSS px. The actual rendered thumb is
-// slightly taller (120 + label ≈ 144), but placeholders only need
-// a height to claim scroll space — picking the canvas height keeps
-// the math simple. Real thumbs sit in an absolute-positioned
-// wrapper that adds the label space.
+// ponytail: row height in CSS px — the FALLBACK used until the
+// first-page aspect ratio resolves. The label is 24px; the canvas
+// height is `THUMB_PT * (pageH / pageW)`. For a square page this
+// lands at 120 + 24 = 144; for US-Letter (612×792) the actual
+// canvas is ~155 CSS px, +24 label = ~179. The fallback assumes
+// a square aspect so it under-estimates Letter — that's why we
+// re-measure on first paint.
 const THUMB_HEIGHT_PT = THUMB_PT + 24;
 
 export function EditorThumbnails({ pdf }: { pdf: PDFDocumentProxy }) {
   const pageIndex = useUIStore((s) => s.pageIndex);
   const setPageIndex = useUIStore((s) => s.setPageIndex);
   const scrollRef = useRef<HTMLDivElement>(null);
+  // ponytail: measured row height. Seeded with the fallback so the
+  // first paint has correct geometry; the effect below reads page 1's
+  // natural viewport and refines to the actual aspect. The +24
+  // bakes in the label row (the canvas-only height would be a few px
+  // too short and the next thumb would still overlap).
+  const [thumbHeight, setThumbHeight] = useState<number>(THUMB_HEIGHT_PT + 24);
   // ponytail: visibleRange covers [start, end] inclusive. The
   // initial value is the first `BUFFER * 2 + 1` rows, clamped to
   // numPages — works for the common case (small PDF, viewport
@@ -54,14 +65,39 @@ export function EditorThumbnails({ pdf }: { pdf: PDFDocumentProxy }) {
     end: Math.min(pdf.numPages - 1, BUFFER * 2),
   }));
 
+  // ponytail: measure-once height. Read page 1's natural size,
+  // derive the canvas-only height for the 120pt-wide slot, and add
+  // the 24px label row. The fallback (THUMB_HEIGHT_PT + 24) is
+  // already in `thumbHeight` so a single-page PDF (or a getPage
+  // failure) still renders without overlap. Catches a `cancelled`
+  // flag so a fast unmount doesn't setState on a stale effect.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const page = await pdf.getPage(1);
+        if (cancelled) return;
+        const baseVp = page.getViewport({ scale: 1 });
+        const aspectH = (THUMB_PT * baseVp.height) / baseVp.width;
+        setThumbHeight(aspectH + 24);
+        page.cleanup();
+      } catch {
+        // ponytail: keep fallback. The 168-px seed is close enough
+        // to most aspects that a brief visual hiccup is cheaper
+        // than a second-pass reflow on error.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [pdf]);
+
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
     const onScroll = () => {
       const top = el.scrollTop;
       const h = el.clientHeight;
-      const firstVisible = Math.max(0, Math.floor(top / THUMB_HEIGHT_PT) - BUFFER);
-      const lastVisible = Math.min(pdf.numPages - 1, Math.ceil((top + h) / THUMB_HEIGHT_PT) + BUFFER);
+      const firstVisible = Math.max(0, Math.floor(top / thumbHeight) - BUFFER);
+      const lastVisible = Math.min(pdf.numPages - 1, Math.ceil((top + h) / thumbHeight) + BUFFER);
       setVisibleRange((prev) =>
         prev.start === firstVisible && prev.end === lastVisible ? prev : { start: firstVisible, end: lastVisible },
       );
@@ -69,7 +105,7 @@ export function EditorThumbnails({ pdf }: { pdf: PDFDocumentProxy }) {
     el.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
     return () => el.removeEventListener('scroll', onScroll);
-  }, [pdf.numPages]);
+  }, [pdf.numPages, thumbHeight]);
 
   // ponytail: scroll the active thumb into view when pageIndex
   // changes externally (toolbar page nav, the jump input). Only
@@ -78,14 +114,14 @@ export function EditorThumbnails({ pdf }: { pdf: PDFDocumentProxy }) {
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const targetTop = pageIndex * THUMB_HEIGHT_PT;
-    if (targetTop < el.scrollTop || targetTop > el.scrollTop + el.clientHeight - THUMB_HEIGHT_PT) {
+    const targetTop = pageIndex * thumbHeight;
+    if (targetTop < el.scrollTop || targetTop > el.scrollTop + el.clientHeight - thumbHeight) {
       el.scrollTo({
-        top: targetTop - el.clientHeight / 2 + THUMB_HEIGHT_PT / 2,
+        top: targetTop - el.clientHeight / 2 + thumbHeight / 2,
         behavior: 'smooth',
       });
     }
-  }, [pageIndex]);
+  }, [pageIndex, thumbHeight]);
 
   // ponytail: drag-to-reorder. The from-index is the page being
   // dragged (read from the dataTransfer payload); the to-index
@@ -129,7 +165,7 @@ export function EditorThumbnails({ pdf }: { pdf: PDFDocumentProxy }) {
       data-testid="editor-thumbnails"
       className="flex w-40 shrink-0 flex-col overflow-y-auto border-r border-ink/10 bg-bg/50 p-2"
     >
-      <div style={{ height: pdf.numPages * THUMB_HEIGHT_PT, position: 'relative' }}>
+      <div style={{ height: pdf.numPages * thumbHeight, position: 'relative' }}>
         {Array.from({ length: pdf.numPages }, (_, i) => {
           const inWindow = i >= visibleRange.start && i <= visibleRange.end;
           if (!inWindow) {
@@ -144,7 +180,7 @@ export function EditorThumbnails({ pdf }: { pdf: PDFDocumentProxy }) {
                 onClick={() => setPageIndex(i)}
                 data-testid={`thumb-placeholder-${i}`}
                 className="absolute left-0 right-0 flex items-center justify-center text-xs tabular-nums text-ink/40 hover:bg-ink/5"
-                style={{ top: i * THUMB_HEIGHT_PT, height: THUMB_HEIGHT_PT }}
+                style={{ top: i * thumbHeight, height: thumbHeight }}
               >
                 {i + 1}
               </button>
@@ -154,7 +190,7 @@ export function EditorThumbnails({ pdf }: { pdf: PDFDocumentProxy }) {
             <div
               key={i}
               className="absolute left-0 right-0"
-              style={{ top: i * THUMB_HEIGHT_PT, height: THUMB_HEIGHT_PT }}
+              style={{ top: i * thumbHeight, height: thumbHeight }}
             >
               <Thumbnail
                 pdf={pdf}

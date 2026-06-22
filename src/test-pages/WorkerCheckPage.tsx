@@ -36,6 +36,14 @@ declare global {
           // roundtrip. Loaded via a dynamic pdf-lib import so this
           // page still lazy-loads pdf-lib only on the inspect path.
           formValues: Record<string, string>;
+          // ponytail: per-annotation rects in PDF user space. The
+          // select-and-move e2e (phase 11) asserts that a moved
+          // highlight's rect landed in a different quadrant. We
+          // convert pdf.js's `[x1,y1,x2,y2]` array to the
+          // `{x, y, w, h}` shape our internal `RectPts` uses so the
+          // assertion reads naturally. `/Widget` is filtered
+          // (form widget infrastructure) — same as the count.
+          annotationRects: { pageIndex: number; id: string; type: string; rect: { x: number; y: number; w: number; h: number } }[];
         }
       | { ok: false; error: string };
   }
@@ -91,6 +99,14 @@ export default function WorkerCheckPage() {
         let annotationCount = 0;
         const textParts: string[] = [];
         const pageSizes: { w: number; h: number }[] = [];
+        // ponytail: per-annotation rects. Same filter as
+        // `annotationCount` (skip /Widget). `id` is pdf.js's
+        // string id; `type` is the PDF /Subtype. The rect is
+        // converted from pdf.js's [x1, y1, x2, y2] (PDF user
+        // space, bottom-left origin) to our `{x, y, w, h}`
+        // shape. Empty rects (zero-area) are still included so
+        // the consumer can see what was exported.
+        const annotationRects: { pageIndex: number; id: string; type: string; rect: { x: number; y: number; w: number; h: number } }[] = [];
         for (let i = 1; i <= pdf.numPages; i++) {
           const p = await pdf.getPage(i);
           const vp = p.getViewport({ scale: 1 });
@@ -101,6 +117,26 @@ export default function WorkerCheckPage() {
               ?? (a as { Subtype?: string }).Subtype;
             if (sub === 'Widget') continue;
             annotationCount++;
+            // ponytail: pdf.js's annotation id is a string; the
+            // rect is the [x1,y1,x2,y2] bounding box in PDF user
+            // space. Cast through `unknown` because the pdf.js
+            // types are loose (the id is `string | number` in
+            // older builds).
+            const id = String((a as { id?: unknown }).id ?? '');
+            const rect = (a as { rect?: number[] }).rect;
+            if (rect && rect.length === 4) {
+              annotationRects.push({
+                pageIndex: i - 1,
+                id,
+                type: sub ?? '',
+                rect: {
+                  x: rect[0],
+                  y: rect[1],
+                  w: rect[2] - rect[0],
+                  h: rect[3] - rect[1],
+                },
+              });
+            }
           }
           const tc = await p.getTextContent();
           // TextContent items are `TextItem | TextMarkedContent`; only
@@ -169,6 +205,7 @@ export default function WorkerCheckPage() {
           canvasHeightPx: bs.height,
           pageSizes,
           formValues,
+          annotationRects,
         };
         setStatus('ready');
       } catch (e) {

@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "demo:coords": "tsx src/lib/coords.cli.ts",
-    "pretest:e2e": "node scripts/generate-sample-pdf.mjs && node scripts/generate-merge-fixtures.mjs && node scripts/generate-3page-pdf.mjs && node scripts/generate-jpg-fixtures.mjs",
+    "pretest:e2e": "node scripts/generate-sample-pdf.mjs && node scripts/generate-merge-fixtures.mjs && node scripts/generate-3page-pdf.mjs && node scripts/generate-30page-pdf.mjs && node scripts/generate-jpg-fixtures.mjs",
     "test:e2e": "npm run pretest:e2e && playwright test",
     "test:e2e:headed": "npm run pretest:e2e && playwright test --headed"
   },
