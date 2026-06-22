@@ -12,11 +12,11 @@ import type { PDFDocumentProxy } from 'pdfjs-dist';
 type Props = {
   pdf: PDFDocumentProxy;
   pageIndex: number;     // 0-based
-  width?: number;        // default 60
+  width?: number;        // default 100 (bumped from 60 — the previews were too small to read; matches the editor sidebar thumb width)
   className?: string;
 };
 
-export function PagePreview({ pdf, pageIndex, width = 60, className }: Props) {
+export function PagePreview({ pdf, pageIndex, width = 100, className }: Props) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const canvas = ref.current;
