@@ -1,4 +1,4 @@
-// ponytail: mirrors SplitPage's single-PDF shell. Adds one extra
+// ponytail: mirrors ExtractPage's single-PDF shell. Adds one extra
 // state slot (currentRotation) read from page 1's `getRotation().angle`.
 // The radio group is a native fieldset — accessible, keyboard-friendly,
 // and Playwright finds the input via getByLabel('90°') because the

@@ -10,7 +10,7 @@ import { PDFDocument } from 'pdf-lib';
 // across the whole tool suite.
 //
 // Centralize the 0↔1 page-index mapping in a shared helper alongside
-// split.ts when a third tool needs it.
+// extract.ts when a third tool needs it.
 export async function deletePages(file: File, keepIndices: number[]): Promise<Uint8Array> {
   const bytes = new Uint8Array(await file.arrayBuffer());
   const src = await PDFDocument.load(bytes);

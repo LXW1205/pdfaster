@@ -30,7 +30,7 @@ export default function LandingPage() {
           Your PDF never leaves your browser.
         </h1>
         <p className="mt-4 text-base text-ink/70 sm:text-lg">
-          Drop, edit, merge, split, convert. All in this tab.
+          Drop, edit, merge, extract, convert. All in this tab.
         </p>
 
         <div className="mt-10 flex w-full max-w-sm flex-col gap-3 sm:flex-row sm:justify-center">

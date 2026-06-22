@@ -13,7 +13,7 @@ export default function NotFoundPage() {
         Not found
       </h1>
       <p className="mt-3 text-base text-ink/70">
-        That page isn't part of pdfaster yet. Tools like merge, split, and convert land in a future update.
+        That page isn't part of pdfaster yet. Tools like merge, extract, and convert land in a future update.
       </p>
       <div className="mt-8 flex gap-3">
         <Link

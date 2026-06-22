@@ -13,7 +13,7 @@ import NotFoundPage from '../pages/NotFoundPage';
 // <Outlet />). All concrete pages are children — they pick up the
 // persistent nav for free. Route-level `lazy` is the v7 idiom for
 // code-splitting a route's component on demand. The 5 tool pages
-// each pull pdf-lib (merge, split, delete-pages, jpg-to-pdf,
+// each pull pdf-lib (merge, extract, delete-pages, jpg-to-pdf,
 // compress) or pdf.js (pdf-to-jpg) — keeping them out of the main
 // bundle is the whole point.
 export const router = createBrowserRouter([
@@ -36,19 +36,12 @@ export const router = createBrowserRouter([
           return { Component: m.default };
         },
       },
-      {
-        path: 'tools/split',
-        lazy: async () => {
-          const m = await import('../pages/tools/SplitPage');
-          return { Component: m.default };
-        },
-      },
-      // ponytail: phase 10 — Extract. Sibling to Split: Extract
-      // accepts non-contiguous page selections (single pages +
-      // multiple ranges), Split takes one contiguous range. Same
-      // pdf-lib primitive (copyPages), different UX. Lazy chunk is
-      // its own so a Split user who never extracts doesn't pay for
-      // parseRangeSpec + the larger page list.
+      // ponytail: phase 10 — Extract. Sibling to the removed Split:
+      // Extract accepts non-contiguous page selections (single pages +
+      // multiple ranges) via its range spec input. Split's single-
+      // contiguous-range case is fully covered by typing "5-7" in
+      // Extract's range field, so Split was removed in phase 14 as
+      // a strict subset.
       {
         path: 'tools/extract',
         lazy: async () => {

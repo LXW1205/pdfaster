@@ -1,4 +1,4 @@
-// ponytail: mirrors SplitPage's single-PDF shell. The page count is
+// ponytail: mirrors ExtractPage's single-PDF shell. The page count is
 // derived from the file (no manual entry). Position + format are
 // native selects — Playwright finds the format select via
 // getByLabel(/format/i) because the wrapping <label> contains the

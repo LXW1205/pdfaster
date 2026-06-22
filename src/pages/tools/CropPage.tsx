@@ -1,4 +1,4 @@
-// ponytail: mirrors SplitPage's single-PDF shell. The page-1 size
+// ponytail: mirrors ExtractPage's single-PDF shell. The page-1 size
 // is read from `getSize()` (MediaBox-derived) and shown above the
 // margin input. The number input is clamped to non-negative on
 // every keystroke; the tool's own clamp + size check catches the

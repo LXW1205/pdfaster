@@ -1,4 +1,4 @@
-// ponytail: mirrors SplitPage's single-PDF shell. The form is a
+// ponytail: mirrors ExtractPage's single-PDF shell. The form is a
 // small block of native inputs (text, range, select, radio) — no
 // new abstraction. Defaults match the prompt's spec: text "DRAFT",
 // opacity 0.3, gray, center.

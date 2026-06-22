@@ -23,7 +23,7 @@ React 19 · Vite · TypeScript · `pdfjs-dist@6.0.227` (pinned, lazy) · `pdf-li
 
 - `/` — landing + tool picker
 - `/editor` — the editor
-- `/tools/:slug` — merge, split, extract, delete-pages, jpg-to-pdf, pdf-to-jpg, compress, reorder, rotate, crop, watermark, page-numbers
+- `/tools/:slug` — merge, extract, delete-pages, jpg-to-pdf, pdf-to-jpg, compress, reorder, rotate, crop, watermark, page-numbers
 
 ## Architecture
 
@@ -167,8 +167,7 @@ Default is interactive, searchable, accessible, fillable PDF. Raster-on-export i
 The suite follows PDFShelter's lead, expanded with client-side-feasible picks from smallpdf.com's catalogue. PDF↔Word/Excel/PPT, OCR, Redact, Compare, and all AI features are out of scope (require server-side processing — incompatible with the "no-cloud" positioning).
 
 - **Merge:** `copyPages` from each source into a new `PDFDocument`. (Phase 5b.)
-- **Split:** page-range UI → `copyPages` selected indices into a new `PDFDocument`. (Phase 5c.)
-- **Extract:** single pages or non-contiguous ranges (e.g. `1, 3, 5-7`) → `copyPages` selected indices into a new `PDFDocument`. Power-user version of Split for when the desired pages aren't contiguous. (Phase 10.)
+- **Extract:** single pages or non-contiguous ranges (e.g. `1, 3, 5-7`) → `copyPages` selected indices into a new `PDFDocument`. Covers both the single-contiguous-range case (typed as `"5-7"`) and the non-contiguous case. (Phase 10; phase 14 supersedes the original Split tool, which is now removed.)
 - **Delete pages:** `removePage` from highest index downward. *ponytail: avoids index-shift bugs.* (Phase 5c.)
 - **JPG → PDF:** `embedJpg` per image, one page per image. (Phase 5c.)
 - **PDF → JPG:** pdf.js render each page → `canvas.toBlob('image/jpeg')`; show a grid of previews with per-page download. (Phase 5c.)
@@ -205,7 +204,7 @@ src/
     panels/      toolbar, properties, thumbnails, page-nav
     state/       zustand stores (useEditorStore, useUIStore, form)
     export/      pdf-lib pipeline (in-place, not copyPages)
-  tools/         merge, split, delete-pages, jpg-to-pdf, pdf-to-jpg, compress, reorder, rotate, crop, watermark, page-numbers
+  tools/         merge, extract, delete-pages, jpg-to-pdf, pdf-to-jpg, compress, reorder, rotate, crop, watermark, page-numbers
   lib/
     coords.ts          one coordinate module + demo()
     pdf-render.ts      pdf.js wrapper
