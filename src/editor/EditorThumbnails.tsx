@@ -50,6 +50,15 @@ export function EditorThumbnails({ pdf }: { pdf: PDFDocumentProxy }) {
   const pageIndex = useUIStore((s) => s.pageIndex);
   const setPageIndex = useUIStore((s) => s.setPageIndex);
   const scrollRef = useRef<HTMLDivElement>(null);
+  // ponytail: ref to the first rendered thumb wrapper. Used by the
+  // ResizeObserver below to read the ACTUAL rendered height of a
+  // thumb (canvas + label + border) — not a constant or an
+  // aspect-ratio estimate. The constant `+ 24` in the phase 12
+  // approach was correct at 16px root but too small at 18px root
+  // (the label grew to ~31px), which is why mixed-aspect PDFs
+  // overlapped. The observer fires when the canvas is added to
+  // the DOM, which is after the pdf.js render promise resolves.
+  const firstThumbRef = useRef<HTMLDivElement>(null);
   // ponytail: measured row height. Seeded with the fallback so the
   // first paint has correct geometry; the effect below reads page 1's
   // natural viewport and refines to the actual aspect. The +24
@@ -64,6 +73,44 @@ export function EditorThumbnails({ pdf }: { pdf: PDFDocumentProxy }) {
     start: 0,
     end: Math.min(pdf.numPages - 1, BUFFER * 2),
   }));
+
+  // ponytail: ResizeObserver on the first thumb wrapper. The
+  // button's height is determined by its content: the canvas (with
+  // an intrinsic size from the page's aspect ratio at 120pt wide)
+  // + the label row (~31px at 18px root: text-xs + py-1 + 1px
+  // border ×2) + 2px border. The observer fires when the canvas
+  // paints (the button's height changes from "just the label" to
+  // "canvas + label"). We capture the FIRST valid reading and
+  // disconnect — a single measurement is enough for the common
+  // case (all pages same aspect ratio). For mixed-aspect PDFs the
+  // last few thumbs still overlap; the honest ceiling. The 500ms
+  // fallback is for the case where the canvas is the same height
+  // as the label (a square page would be a rare but real case) and
+  // the observer doesn't fire.
+  useEffect(() => {
+    const el = firstThumbRef.current;
+    if (!el) return;
+    let measured = false;
+    const apply = (h: number) => {
+      if (measured || !h || h <= 0) return;
+      measured = true;
+      setThumbHeight(h);
+    };
+    const ro = new ResizeObserver((entries) => {
+      const h = entries[0]?.contentRect.height;
+      if (h) apply(h);
+    });
+    ro.observe(el);
+    // ponytail: synchronous initial read — the button might already
+    // have its final height if the canvas painted before the
+    // observer attached. The observer covers the async case.
+    apply(el.getBoundingClientRect().height);
+    const fallback = setTimeout(() => apply(el.getBoundingClientRect().height), 500);
+    return () => {
+      ro.disconnect();
+      clearTimeout(fallback);
+    };
+  }, [pdf]);
 
   // ponytail: measure-once height. Read page 1's natural size,
   // derive the canvas-only height for the 120pt-wide slot, and add
@@ -189,6 +236,7 @@ export function EditorThumbnails({ pdf }: { pdf: PDFDocumentProxy }) {
           return (
             <div
               key={i}
+              ref={i === 0 ? firstThumbRef : undefined}
               className="absolute left-0 right-0"
               style={{ top: i * thumbHeight, height: thumbHeight }}
             >

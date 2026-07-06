@@ -723,7 +723,17 @@ function LoadedEditorBody({
                 position: 'relative',
                 width: 'fit-content',
                 minWidth: '100%',
-                minHeight: '100%',
+                // ponytail: no minHeight — the wrapper is the page's
+                // natural height, not the editor pane's. A minHeight:
+                // 100% made the wrapper as tall as the pane, so the
+                // page sat at the top with the editor background
+                // (bg-ink/5) showing below it — the page looked
+                // "extended." The page div itself has the correct
+                // width/height from the viewport; the wrapper just
+                // wraps it. Horizontal centering needs minWidth: 100%
+                // (so mx-auto on the page can center within the
+                // pane); vertical doesn't need anything because the
+                // page is at the top by default.
               }}
             >
               <PageView pdf={pdf} onError={onError} page={page} onPage={setPage} findStore={findStore} />
