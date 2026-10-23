@@ -25,8 +25,8 @@ export default function LandingPage() {
 
   return (
     <Container className="flex flex-1 flex-col py-16">
-      <div className="flex flex-1 flex-col items-center justify-center text-center">
-        <h1 className="text-balance text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
+      <div className="rise flex flex-1 flex-col items-center justify-center text-center">
+        <h1 className="text-balance text-4xl font-display leading-tight tracking-tight sm:text-5xl">
           Your PDF never leaves your browser.
         </h1>
         <p className="mt-4 text-base text-ink/70 sm:text-lg">
@@ -36,13 +36,13 @@ export default function LandingPage() {
         <div className="mt-10 flex w-full max-w-sm flex-col gap-3 sm:flex-row sm:justify-center">
           <Link
             to="/editor"
-            className="inline-flex items-center justify-center rounded-md bg-primary px-5 py-3 text-base font-semibold text-ink shadow-sm transition-colors hover:bg-secondary hover:text-bg focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
+            className="inline-flex items-center justify-center rounded-md bg-primary px-5 py-3 font-display text-base text-primary-ink shadow-shaft transition-colors hover:bg-signal hover:text-primary-ink focus-visible:ring-2 focus-visible:ring-signal-press focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
           >
             Open the editor
           </Link>
           <Link
             to="/tools/merge"
-            className="inline-flex items-center justify-center rounded-md border border-ink/15 bg-bg px-5 py-3 text-base font-medium text-ink transition-colors hover:border-ink/30 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
+            className="inline-flex items-center justify-center rounded-md border border-border bg-bg px-5 py-3 font-display text-sm text-ink transition-colors hover:border-ink/30 focus-visible:ring-2 focus-visible:ring-signal-press focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
           >
             Tools
           </Link>
@@ -54,8 +54,8 @@ export default function LandingPage() {
             aria-label="Recent files"
             className="mt-12 w-full max-w-md text-left"
           >
-            <h2 className="text-xs font-medium uppercase tracking-wide text-ink/60">Recent</h2>
-            <ul className="mt-3 divide-y divide-ink/10 overflow-hidden rounded-md border border-ink/10">
+            <h2 className="font-display text-xs text-ink/60">Recent</h2>
+            <ul className="mt-3 divide-y divide-border overflow-hidden rounded-md border border-border">
               {recent.map((s) => (
                 <li key={s.sessionId}>
                   <Link
@@ -64,7 +64,7 @@ export default function LandingPage() {
                     className="flex items-center justify-between gap-3 px-4 py-3 text-sm hover:bg-ink/5"
                   >
                     <span className="truncate text-ink">{s.fileName}</span>
-                    <span className="shrink-0 text-ink/50 tabular-nums">
+                    <span className="shrink-0 text-ink/50 tabular-nums font-mono">
                       {fmtSize(s.fileSize)} · {fmtRelative(s.updatedAt)}
                     </span>
                   </Link>

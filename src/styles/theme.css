@@ -1,9 +1,48 @@
 @import "tailwindcss";
 
-@theme {
-  --color-bg:        #F5F5F5;
-  --color-primary:   #48CFCB;
-  --color-secondary: #229799;
-  --color-ink:       #424242;
-  --font-sans:       "Blinker", "Inter", system-ui, sans-serif;
+/* Hi-Fi Instrument contract (design/DESIGN.md). `inline` keeps
+ * Tailwind from re-emitting :root vars of its own — every utility
+ * below resolves straight to design/tokens.css, so there is one
+ * source of truth. */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--text);
+  --color-muted: var(--text-muted);
+  --color-primary: var(--primary);
+  --color-primary-ink: var(--primary-ink);
+  /* accent: signal orange — engaged/active controls only (§2) */
+  --color-secondary: var(--signal);
+  --color-signal: var(--signal);
+  --color-signal-press: var(--signal-press);
+  --color-border: var(--border);
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+
+  --font-sans: var(--font-body);
+  --font-mono: var(--font-mono);
+}
+
+/* Display role: caps mono micro-labels — tool names, section
+ * titles, buttons, nav, status labels (DESIGN §2 Type). */
+@utility font-display {
+  font-family: var(--font-display);
+  font-weight: var(--font-display-weight);
+  letter-spacing: var(--font-display-tracking);
+  text-transform: uppercase;
+}
+
+/* Shaft depth: every control sits in an inset shadow well;
+ * hover deepens the well (DESIGN §2 Shape/depth). */
+@utility shadow-shaft {
+  box-shadow: var(--shadow);
+}
+@utility shadow-shaft-hover {
+  box-shadow: var(--shadow-hover);
+}
+@utility shadow-toplight {
+  box-shadow: var(--shadow-toplight);
 }

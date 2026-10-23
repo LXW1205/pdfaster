@@ -64,7 +64,7 @@ export default function EditorDropZone({ onFile, error, hint }: Props) {
       className={[
         'flex h-full w-full flex-col items-center justify-center gap-6 p-10 transition-colors',
         'border-2 border-dashed',
-        isDragging ? 'border-secondary bg-primary/10' : 'border-primary/70',
+        isDragging ? 'border-signal bg-signal/10' : 'border-primary/70',
       ].join(' ')}
     >
       <div className="flex flex-col items-center gap-3 text-center">
@@ -72,7 +72,7 @@ export default function EditorDropZone({ onFile, error, hint }: Props) {
         <p className="text-sm text-ink/60">or</p>
 
         <label
-          className="inline-flex cursor-pointer items-center justify-center rounded-md bg-primary px-6 py-3 text-lg font-semibold text-ink shadow-sm transition-colors hover:bg-secondary hover:text-bg focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 focus-within:ring-offset-bg"
+          className="inline-flex cursor-pointer items-center justify-center rounded-md font-display bg-primary px-6 py-3 text-lg text-primary-ink shadow-shaft transition-colors hover:bg-signal hover:text-primary-ink focus-within:ring-2 focus-within:ring-signal-press focus-within:ring-offset-2 focus-within:ring-offset-bg"
         >
           Choose a PDF
           <input
@@ -94,7 +94,7 @@ export default function EditorDropZone({ onFile, error, hint }: Props) {
 
       <p className="text-xs text-ink/50">Stays on your device. Nothing uploads.</p>
       {hint && (
-        <p data-testid="editor-drop-hint" className="rounded-md border border-secondary/30 bg-secondary/10 px-3 py-2 text-sm font-medium text-secondary">
+        <p data-testid="editor-drop-hint" className="font-mono rounded-md border border-signal/30 bg-signal/10 px-3 py-2 text-sm font-medium text-signal">
           {hint}
         </p>
       )}

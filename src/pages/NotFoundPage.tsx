@@ -9,7 +9,7 @@ import { Link } from 'react-router-dom';
 export default function NotFoundPage() {
   return (
     <main className="mx-auto flex min-h-svh max-w-xl flex-col items-center justify-center px-6 text-center">
-      <h1 className="text-3xl font-semibold tracking-tight text-ink">
+      <h1 className="text-3xl font-display tracking-tight text-ink">
         Not found
       </h1>
       <p className="mt-3 text-base text-ink/70">
@@ -18,13 +18,13 @@ export default function NotFoundPage() {
       <div className="mt-8 flex gap-3">
         <Link
           to="/"
-          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-ink hover:bg-secondary"
+          className="rounded-md bg-primary px-4 py-2 font-display text-sm text-primary-ink shadow-shaft hover:bg-signal hover:shadow-shaft-hover"
         >
           Back to home
         </Link>
         <Link
           to="/editor"
-          className="rounded-md border border-ink/30 px-4 py-2 text-sm font-medium text-ink/80 hover:bg-ink/5"
+          className="rounded-md border border-ink/30 px-4 py-2 font-display text-sm text-ink/80 hover:bg-ink/5"
         >
           Open the editor
         </Link>

@@ -98,7 +98,7 @@ export default function ReorderPage() {
   return (
     <Container className="py-12">
       <header>
-        <h1 className="text-3xl font-semibold tracking-tight text-ink">Reorder pages</h1>
+        <h1 className="text-3xl font-display tracking-tight text-ink">Reorder pages</h1>
         <p className="mt-2 text-base text-ink/70">Reorder the pages of a PDF. Use the arrows to move a page up or down. Stays on your device.</p>
       </header>
 
@@ -119,7 +119,7 @@ export default function ReorderPage() {
           <PagedPageList
             count={pageCount}
             ariaLabel="Pages"
-            className="divide-y divide-ink/10 rounded-md border border-ink/10"
+            className="divide-y divide-border rounded-md border border-border"
             // ponytail: key on the original page index (order[i])
             // — when the user moves pages, the keys follow the
             // pages, not the rows. Keeps React's identity stable
@@ -137,7 +137,7 @@ export default function ReorderPage() {
                       width=60, so the row's height stays stable
                       even before the canvas paints. */}
                   {previewPdf && <PagePreview pdf={previewPdf} pageIndex={i} />}
-                  <span className="w-10 font-medium text-ink">{i + 1}.</span>
+                  <span className="w-10 font-mono text-ink">{i + 1}.</span>
                   <span className="flex-1 text-ink/80">Page {origIdx + 1}</span>
                   <button
                     type="button"
@@ -166,7 +166,7 @@ export default function ReorderPage() {
           onClick={onReorder}
           disabled={!file || pageCount === 0 || busy}
           data-testid="reorder-action"
-          className="rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-ink hover:bg-secondary disabled:opacity-50"
+          className="rounded-md bg-primary px-5 py-2.5 font-display text-sm text-primary-ink shadow-shaft hover:bg-signal hover:shadow-shaft-hover disabled:opacity-50"
         >
           {busy ? 'Reordering…' : 'Reorder'}
         </button>
@@ -175,7 +175,7 @@ export default function ReorderPage() {
             type="button"
             onClick={() => downloadBytes(result, 'reordered.pdf', 'application/pdf')}
             data-testid="reorder-download"
-            className="rounded-md border border-ink/20 px-5 py-2.5 text-sm font-medium text-ink/80 hover:bg-ink/5"
+            className="rounded-md border border-ink/20 px-5 py-2.5 font-display text-sm text-ink/80 shadow-shaft hover:bg-ink/5 hover:shadow-shaft-hover"
           >
             Download reordered.pdf
           </button>

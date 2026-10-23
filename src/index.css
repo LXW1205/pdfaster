@@ -1,3 +1,4 @@
+@import "../design/tokens.css";
 @import "./styles/theme.css";
 
 /* ponytail: base font size 18px. Every Tailwind `text-*` utility is
@@ -13,25 +14,102 @@
 
 body {
   margin: 0;
-  font-family: var(--font-sans);
-  background: var(--color-bg);
-  color: var(--color-ink);
+  font-family: var(--font-body);
+  background-color: var(--bg);
+  color: var(--text);
+  /* DESIGN §2: 4% soft grain on the page casing — static SVG tile,
+   * no asset file, no animation. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
 }
 
 #root {
   min-height: 100svh;
 }
 
+/* DESIGN §2 Motion: handles on background-color, box-shadow,
+ * transform, color (uniform on controls; --dur collapses to 0ms
+ * under prefers-reduced-motion via tokens.css). */
+button,
+input,
+select,
+textarea,
+a,
+label:has(input, select) {
+  transition:
+    background-color var(--dur) var(--ease),
+    color var(--dur) var(--ease),
+    border-color var(--dur) var(--ease),
+    box-shadow var(--dur) var(--ease),
+    transform var(--dur) var(--ease);
+}
+
 /* ponytail: quality floor from the spec's landing page brief —
  * honor user motion preferences and give the keyboard a visible
- * focus ring in the brand color. */
+ * focus ring. DESIGN §2: 2px --signal-press ring, AA on cream. */
 :focus-visible {
-  outline: 2px solid var(--color-primary);
+  outline: 2px solid var(--signal-press);
   outline-offset: 2px;
 }
 
+/* DESIGN §3 press: 2px settle-down + deeper shaft. Pure CSS, no
+ * state — release snaps back. */
+button:active,
+label:has(input, select):active {
+  transform: translateY(2px);
+}
+
+/* Entrances: one-time rise for hero / tool-grid children — 150ms,
+ * 40ms stagger, once per mount, no loop (DESIGN §2 Motion). */
+@keyframes machine-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.rise > * {
+  animation: machine-rise var(--dur) var(--ease) both;
+}
+.rise > *:nth-child(2) { animation-delay: 40ms; }
+.rise > *:nth-child(3) { animation-delay: 80ms; }
+.rise > *:nth-child(4) { animation-delay: 120ms; }
+.rise > *:nth-child(5) { animation-delay: 160ms; }
+.rise > *:nth-child(6) { animation-delay: 200ms; }
+.rise > *:nth-child(7) { animation-delay: 240ms; }
+.rise > *:nth-child(8) { animation-delay: 280ms; }
+
+/* DESIGN §3 Nav: engraved hairline under-dot; hover reveals it,
+ * the active page's dot is signal orange. */
+.nav-item::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -2px;
+  width: 4px;
+  height: 4px;
+  translate: -50% 0;
+  border-radius: 9999px;
+  background: var(--border);
+  opacity: 0;
+  transition: opacity var(--dur) var(--ease), background-color var(--dur) var(--ease);
+}
+.nav-item:hover::after,
+.nav-item[aria-current="page"]::after,
+.nav-item[data-active="true"]::after {
+  opacity: 1;
+}
+.nav-item[aria-current="page"]::after,
+.nav-item[data-active="true"]::after {
+  background: var(--signal);
+}
+.nav-item {
+  position: relative;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  * {
+  *,
+  *::before,
+  *::after {
     transition: none !important;
     animation: none !important;
   }

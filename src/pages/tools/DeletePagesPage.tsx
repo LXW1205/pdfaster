@@ -92,7 +92,7 @@ export default function DeletePagesPage() {
   return (
     <Container className="py-12">
       <header>
-        <h1 className="text-3xl font-semibold tracking-tight text-ink">Delete pages</h1>
+        <h1 className="text-3xl font-display tracking-tight text-ink">Delete pages</h1>
         <p className="mt-2 text-base text-ink/70">Uncheck the pages you want to remove. Checked pages stay. Stays on your device.</p>
       </header>
 
@@ -107,7 +107,7 @@ export default function DeletePagesPage() {
       {file && pageCount > 0 && (
         <section className="mt-6">
           <div className="mb-3 flex items-center justify-between gap-3">
-            <div className="text-sm text-ink/70">
+            <div className="font-mono text-sm text-ink/70">
               <span className="font-medium text-ink">{keepCount}</span> of {pageCount} kept
             </div>
             <div className="flex gap-2">
@@ -132,7 +132,7 @@ export default function DeletePagesPage() {
           <PagedPageList
             count={pageCount}
             ariaLabel="Pages"
-            className="divide-y divide-ink/10 rounded-md border border-ink/10"
+            className="divide-y divide-border rounded-md border border-border"
             // ponytail: key on `i` (the position in the list). The
             // rows don't move around, so the index is the stable
             // identity. Same as the prior <ul key={i}>.
@@ -142,7 +142,7 @@ export default function DeletePagesPage() {
               return (
                 <div className="flex items-center gap-3 px-4 py-2 text-sm">
                   {previewPdf && <PagePreview pdf={previewPdf} pageIndex={i} />}
-                  <span className="w-10 font-medium text-ink">{i + 1}.</span>
+                  <span className="w-10 font-mono text-ink">{i + 1}.</span>
                   <span className="flex-1 text-ink/70">Page {i + 1}</span>
                   <label className="flex items-center gap-2 text-sm text-ink/80">
                     <input
@@ -167,7 +167,7 @@ export default function DeletePagesPage() {
           onClick={onSave}
           disabled={!file || keepCount === 0 || keepCount === pageCount || busy}
           data-testid="delete-pages-action"
-          className="rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-ink hover:bg-secondary disabled:opacity-50"
+          className="rounded-md bg-primary px-5 py-2.5 font-display text-sm text-primary-ink shadow-shaft hover:bg-signal hover:shadow-shaft-hover disabled:opacity-50"
         >
           {busy ? 'Saving…' : 'Save without unchecked pages'}
         </button>
@@ -176,7 +176,7 @@ export default function DeletePagesPage() {
             type="button"
             onClick={() => downloadBytes(result, 'pages-removed.pdf', 'application/pdf')}
             data-testid="delete-pages-download"
-            className="rounded-md border border-ink/20 px-5 py-2.5 text-sm font-medium text-ink/80 hover:bg-ink/5"
+            className="rounded-md border border-ink/20 px-5 py-2.5 font-display text-sm text-ink/80 shadow-shaft hover:bg-ink/5 hover:shadow-shaft-hover"
           >
             Download pages-removed.pdf
           </button>

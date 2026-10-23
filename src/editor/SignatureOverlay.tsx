@@ -138,7 +138,7 @@ function SignaturePad({ viewport, pageIndex }: { viewport: Viewport; pageIndex: 
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: 'rgba(66, 66, 66, 0.35)',
+        backgroundColor: 'rgba(26, 26, 24, 0.35)',
       }}
     >
       <div
@@ -146,9 +146,9 @@ function SignaturePad({ viewport, pageIndex }: { viewport: Viewport; pageIndex: 
         aria-modal="true"
         aria-labelledby="signature-pad-title"
         onClick={(e) => e.stopPropagation()}
-        className="rounded-lg bg-white p-4 shadow-lg"
+        className="rounded-md bg-surface p-4 shadow-lg"
       >
-        <h2 id="signature-pad-title" className="mb-2 text-sm font-medium text-ink">
+        <h2 id="signature-pad-title" className="mb-2 font-display text-sm text-ink">
           Sign here
         </h2>
         <canvas
@@ -162,9 +162,9 @@ function SignaturePad({ viewport, pageIndex }: { viewport: Viewport; pageIndex: 
             display: 'block',
             width: PAD_W,
             height: PAD_H,
-            border: '2px solid #48CFCB',
+            border: '2px solid var(--border)',
             borderRadius: 4,
-            background: 'white',
+            background: 'var(--surface)',
             touchAction: 'none',
             cursor: 'crosshair',
           }}
@@ -184,7 +184,7 @@ function SignaturePad({ viewport, pageIndex }: { viewport: Viewport; pageIndex: 
             data-testid="signature-apply"
             onClick={apply}
             disabled={!drawn}
-            className="rounded bg-primary px-3 py-1.5 text-sm font-semibold text-ink hover:bg-secondary disabled:opacity-50"
+            className="rounded bg-primary px-3 py-1.5 font-display text-sm text-primary-ink shadow-shaft hover:bg-signal hover:shadow-shaft-hover disabled:opacity-50"
           >
             Apply
           </button>

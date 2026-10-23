@@ -46,8 +46,8 @@ export function FindOverlay({ viewport, store }: { viewport: Viewport; store: Fi
               top: r.top,
               width: r.width,
               height: r.height,
-              border: `${isCurrent ? 2 : 1}px solid ${isCurrent ? '#FF6F00' : '#48CFCB'}`,
-              background: isCurrent ? 'rgba(255, 111, 0, 0.12)' : 'transparent',
+              border: `${isCurrent ? 2 : 1}px solid ${isCurrent ? 'var(--signal)' : 'var(--signal-press)'}`,
+              background: isCurrent ? 'rgba(255, 107, 26, 0.12)' : 'transparent',
               borderRadius: 1,
             }}
           />

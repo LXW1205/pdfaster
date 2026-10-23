@@ -71,11 +71,12 @@ function NavDropdown({ category, currentPath }: { category: NavCategory; current
         type="button"
         aria-haspopup="menu"
         aria-expanded={open}
+        data-active={isActive ? "true" : undefined}
         onClick={() => setOpen((o) => !o)}
         title={`${category.label} tools`}
         className={isActive
-          ? 'inline-flex items-center gap-1 rounded-md bg-primary px-4 py-2 text-base font-medium text-ink'
-          : 'inline-flex items-center gap-1 rounded-md px-4 py-2 text-base font-medium text-ink/70 hover:bg-ink/5 hover:text-ink'}
+          ? 'nav-item inline-flex items-center gap-1 rounded-md px-4 py-2 font-display text-xs text-ink'
+          : 'nav-item inline-flex items-center gap-1 rounded-md px-4 py-2 font-display text-xs text-ink/70 hover:bg-ink/5 hover:text-ink'}
       >
         {category.label}
         <span aria-hidden="true" className="text-xs">▾</span>
@@ -84,7 +85,7 @@ function NavDropdown({ category, currentPath }: { category: NavCategory; current
         <div
           role="menu"
           aria-label={category.label}
-          className="absolute left-0 top-full z-20 mt-1 w-64 rounded-md border border-ink/10 bg-bg py-1 shadow-lg"
+          className="absolute left-0 top-full z-20 mt-1 w-64 rounded-md border border-border bg-surface py-1 shadow-lg"
         >
           {category.items.map((it) => {
             const itemActive = it.to === currentPath;
@@ -95,10 +96,10 @@ function NavDropdown({ category, currentPath }: { category: NavCategory; current
                 role="menuitem"
                 title={it.description}
                 className={itemActive
-                  ? 'block px-4 py-2 bg-primary/30'
+                  ? 'block px-4 py-2 bg-signal/10'
                   : 'block px-4 py-2 hover:bg-ink/5'}
               >
-                <div className="text-sm font-medium text-ink">{it.label}</div>
+                <div className="font-display text-xs text-ink">{it.label}</div>
                 <div className="mt-0.5 text-xs text-ink/60">{it.description}</div>
               </Link>
             );
@@ -112,7 +113,7 @@ function NavDropdown({ category, currentPath }: { category: NavCategory; current
 export function Nav() {
   const location = useLocation();
   return (
-    <header className="sticky top-0 z-30 border-b border-ink/10 bg-bg/85 backdrop-blur supports-[backdrop-filter]:bg-bg/70">
+    <header className="sticky top-0 z-30 border-b border-border bg-bg/85 backdrop-blur supports-[backdrop-filter]:bg-bg/70">
       <div className="mx-auto flex max-w-6xl flex-nowrap items-center gap-x-2 px-8 py-3">
         <Link to="/" title="Back to home" className="mr-2 shrink-0 text-base font-semibold tracking-tight text-ink">
           pdfaster
@@ -123,8 +124,8 @@ export function Nav() {
             title="Open the PDF editor"
             className={({ isActive }) =>
               isActive
-                ? 'rounded-md bg-primary px-4 py-2 text-base font-medium text-ink'
-                : 'rounded-md px-4 py-2 text-base font-medium text-ink/70 hover:bg-ink/5 hover:text-ink'
+                ? 'nav-item rounded-md px-4 py-2 font-display text-xs text-ink'
+                : 'nav-item rounded-md px-4 py-2 font-display text-xs text-ink/70 hover:bg-ink/5 hover:text-ink'
             }
           >
             Editor

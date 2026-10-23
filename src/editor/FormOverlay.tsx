@@ -86,7 +86,7 @@ function FieldWidget({
     top,
     width,
     height,
-    border: '2px solid #48CFCB',
+    border: '2px solid var(--border)',
     borderRadius: 2,
     background: 'rgba(255,255,255,0.6)',
     pointerEvents: 'auto',

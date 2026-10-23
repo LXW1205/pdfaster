@@ -221,7 +221,7 @@ export default function WorkerCheckPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center gap-6 px-6 py-16">
-      <canvas ref={canvasRef} className="rounded-sm bg-white shadow-sm" />
+      <canvas ref={canvasRef} className="rounded-sm bg-surface shadow-sm" />
       <p className="font-mono text-sm opacity-70" data-testid="status">{status}</p>
     </main>
   );

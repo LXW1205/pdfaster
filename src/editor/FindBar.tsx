@@ -117,7 +117,7 @@ export function FindBar({ open, page, store, onClose }: Props) {
     <div
       data-testid="find-bar"
       role="search"
-      className="flex items-center gap-1 rounded-md border border-ink/15 bg-bg px-2 py-1"
+      className="flex items-center gap-1 rounded-md border border-border bg-surface-2 px-2 py-1"
     >
       <input
         autoFocus
@@ -141,7 +141,7 @@ export function FindBar({ open, page, store, onClose }: Props) {
       />
       <span
         data-testid="find-count"
-        className="min-w-[3rem] text-center text-xs tabular-nums text-ink/60"
+        className="min-w-[3rem] text-center text-xs tabular-nums font-mono text-ink/60"
       >
         {matchCount > 0 ? `${current + 1}/${matchCount}` : '0/0'}
       </span>

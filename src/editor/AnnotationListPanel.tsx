@@ -53,7 +53,7 @@ export function AnnotationListPanel({ pageIndex, open, onToggle }: Props) {
         onClick={onToggle}
         aria-label="Show annotations"
         title="Show annotations"
-        className="absolute right-2 top-2 z-10 rounded-md border border-ink/15 bg-bg/90 px-2 py-1 text-xs text-ink/60 shadow-sm hover:bg-bg hover:text-ink"
+        className="absolute right-2 top-2 z-10 rounded-md border border-border bg-surface-2 px-2 py-1 text-xs text-ink/60 shadow-shaft hover:bg-surface-2 hover:text-ink"
       >
         ▸ Annotations
       </button>
@@ -71,10 +71,10 @@ export function AnnotationListPanel({ pageIndex, open, onToggle }: Props) {
     <aside
       data-testid="annotation-list-panel"
       aria-label="Annotations on this page"
-      className="flex w-56 shrink-0 flex-col border-l border-ink/10 bg-bg/50"
+      className="flex w-56 shrink-0 flex-col border-l border-border bg-surface-2"
     >
-      <div className="flex items-center justify-between border-b border-ink/10 px-3 py-2">
-        <h2 className="text-xs font-medium uppercase tracking-wide text-ink/60">
+      <div className="flex items-center justify-between border-b border-border px-3 py-2">
+        <h2 className="font-display text-xs text-ink/60">
           Annotations ({onPage.length})
         </h2>
         <button
@@ -92,7 +92,7 @@ export function AnnotationListPanel({ pageIndex, open, onToggle }: Props) {
           No annotations on this page.
         </p>
       ) : (
-        <ul className="flex-1 divide-y divide-ink/10 overflow-y-auto">
+        <ul className="flex-1 divide-y divide-border overflow-y-auto">
           {onPage.map((a) => {
             const meta = AnnotationRegistry.get(a.type);
             const color = 'color' in a ? a.color : meta?.defaultStyle.color ?? [0, 0, 0];
@@ -110,7 +110,7 @@ export function AnnotationListPanel({ pageIndex, open, onToggle }: Props) {
                   }}
                 />
                 <span className="flex-1 truncate text-ink">{TYPE_LABEL[a.type]}</span>
-                <span className="shrink-0 text-ink/40 tabular-nums">{shortTimestamp(a.createdAt, now)}</span>
+                <span className="shrink-0 text-ink/40 tabular-nums font-mono">{shortTimestamp(a.createdAt, now)}</span>
                 <button
                   type="button"
                   data-testid={`annotation-list-delete-${a.type}`}

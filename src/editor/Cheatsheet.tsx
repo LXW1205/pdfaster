@@ -55,10 +55,10 @@ export function Cheatsheet() {
       onClick={() => setOpen(false)}
     >
       <div
-        className="w-full max-w-md rounded-lg bg-bg p-6 shadow-xl"
+        className="w-full max-w-md rounded-md bg-surface p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 id="cheatsheet-title" className="text-lg font-semibold text-ink">
+        <h2 id="cheatsheet-title" className="font-display text-lg text-ink">
           Keyboard shortcuts
         </h2>
         <ul className="mt-4 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-base">

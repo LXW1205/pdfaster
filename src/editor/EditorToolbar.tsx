@@ -216,13 +216,13 @@ export function EditorToolbar({ pdf, pageCount, fileName, disabled, onExport, on
     <div
       data-testid="editor-toolbar"
       data-page-count={pageCount}
-      className="sticky top-0 z-20 border-b border-ink/10 bg-bg/85 backdrop-blur"
+      className="sticky top-0 z-20 border-b border-border bg-surface-2 backdrop-blur"
     >
       <Container className="flex flex-wrap items-center gap-1.5 py-2">
         {fileName && (
           <span
             data-testid="editor-filename"
-            className="mr-2 max-w-[12rem] truncate text-base font-medium text-ink/80"
+            className="mr-2 max-w-[12rem] truncate font-display text-sm text-ink/80"
             title={fileName}
           >
             {fileName}
@@ -261,7 +261,7 @@ export function EditorToolbar({ pdf, pageCount, fileName, disabled, onExport, on
         </IconButton>
         <span
           data-testid="zoom-label"
-          className="min-w-[3.25rem] select-none text-center text-base tabular-nums text-ink/70"
+          className="min-w-[3.25rem] select-none text-center text-base tabular-nums font-mono text-ink/70"
         >
           {Math.round(zoom * 100)}%
         </span>
@@ -278,7 +278,7 @@ export function EditorToolbar({ pdf, pageCount, fileName, disabled, onExport, on
           onClick={() => onFit?.()}
           aria-label="Zoom to fit"
           title="Zoom to fit (0)"
-          className="rounded px-3 py-2 text-xs text-ink/60 hover:bg-ink/5"
+          className="font-display rounded px-3 py-2 text-xs text-ink/60 hover:bg-ink/5"
         >
           Fit
         </button>
@@ -286,7 +286,7 @@ export function EditorToolbar({ pdf, pageCount, fileName, disabled, onExport, on
           type="button"
           data-testid="zoom-reset"
           onClick={() => setZoom(1)}
-          className="rounded px-3 py-2 text-xs text-ink/60 hover:bg-ink/5"
+          className="font-display rounded px-3 py-2 text-xs text-ink/60 hover:bg-ink/5"
         >
           Reset
         </button>
@@ -303,7 +303,7 @@ export function EditorToolbar({ pdf, pageCount, fileName, disabled, onExport, on
         </IconButton>
         <span
           data-testid="page-indicator"
-          className="flex items-center gap-1 text-base tabular-nums text-ink/70"
+          className="flex items-center gap-1 text-base tabular-nums font-mono text-ink/70"
         >
           {/*
             ponytail: the page number is a visible text node, not an
@@ -325,7 +325,7 @@ export function EditorToolbar({ pdf, pageCount, fileName, disabled, onExport, on
               setPageIndex(n - 1);
             }}
             aria-label="Jump to page"
-            className="ml-1 w-12 rounded border border-ink/15 bg-transparent px-1 py-0.5 text-center text-sm tabular-nums text-ink/80 focus:border-primary focus:outline-none"
+            className="ml-1 w-12 rounded bg-surface px-1 py-0.5 text-center text-sm tabular-nums font-mono text-ink/80 focus:border-signal-press focus:outline-none"
             disabled={!hasDoc}
           />
         </span>
@@ -346,7 +346,7 @@ export function EditorToolbar({ pdf, pageCount, fileName, disabled, onExport, on
           onClick={() => setFindOpen(true)}
           aria-label="Find in page"
           title="Find in page (Ctrl+F)"
-          className="rounded px-3 py-2 text-xs text-ink/60 hover:bg-ink/5"
+          className="font-display rounded px-3 py-2 text-xs text-ink/60 hover:bg-ink/5"
         >
           Find
         </button>
@@ -358,7 +358,7 @@ export function EditorToolbar({ pdf, pageCount, fileName, disabled, onExport, on
           aria-label="Page rotation"
           value={rotation}
           onChange={(e) => setRotation(Number(e.target.value) as 0 | 90 | 180 | 270)}
-          className="rounded border border-ink/15 bg-transparent px-3 py-2 text-base text-ink/70 focus:border-primary focus:outline-none"
+          className="rounded bg-surface px-3 py-2 text-sm text-ink/70 focus:border-signal-press shadow-shaft focus:outline-none"
         >
           <option value={0}>0°</option>
           <option value={90}>90°</option>
@@ -382,7 +382,7 @@ export function EditorToolbar({ pdf, pageCount, fileName, disabled, onExport, on
               onClick={() => onShowCheatsheet()}
               aria-label="Show keyboard shortcuts"
               title="Keyboard shortcuts (?)"
-              className="rounded-md px-3 py-2 text-base text-ink/60 hover:bg-ink/5 hover:text-ink"
+              className="font-display rounded-md px-3 py-2 text-sm text-ink/60 hover:bg-ink/5 hover:text-ink"
             >
               ?
             </button>
@@ -393,7 +393,7 @@ export function EditorToolbar({ pdf, pageCount, fileName, disabled, onExport, on
             onClick={() => setAnnotationListOpen(!annotationListOpen)}
             aria-label={annotationListOpen ? 'Hide annotation list' : 'Show annotation list'}
             title="Annotation list"
-            className="rounded-md px-3 py-2 text-base text-ink/60 hover:bg-ink/5 hover:text-ink"
+            className="font-display rounded-md px-3 py-2 text-sm text-ink/60 hover:bg-ink/5 hover:text-ink"
           >
             {annotationListOpen ? '▾' : '▸'} List
           </button>
@@ -404,7 +404,7 @@ export function EditorToolbar({ pdf, pageCount, fileName, disabled, onExport, on
               onClick={onClose}
               aria-label="Close editor and clear saved session"
               title="Clear the saved session"
-              className="rounded-md px-4 py-2 text-base font-medium text-ink/60 hover:bg-ink/5 hover:text-ink"
+              className="font-display rounded-md px-4 py-2 text-sm text-ink/60 hover:bg-ink/5 hover:text-ink"
             >
               Close
             </button>
@@ -414,7 +414,7 @@ export function EditorToolbar({ pdf, pageCount, fileName, disabled, onExport, on
             data-testid="print"
             onClick={handlePrint}
             disabled={disabled || exporting}
-            className="inline-flex items-center gap-1 rounded-md border border-ink/20 bg-bg px-4 py-2 text-base font-medium text-ink/80 transition-colors hover:bg-ink/5 disabled:opacity-50"
+            className="inline-flex items-center gap-1 rounded-md border border-ink/20 bg-bg px-4 py-2 font-display text-sm text-ink/80 transition-colors hover:bg-ink/5 shadow-shaft hover:shadow-shaft-hover disabled:opacity-50"
           >
             Print
           </button>
@@ -423,7 +423,7 @@ export function EditorToolbar({ pdf, pageCount, fileName, disabled, onExport, on
             data-testid="export-pdf"
             onClick={handleExportClick}
             disabled={disabled || exporting}
-            className="inline-flex items-center gap-1 rounded-md bg-primary px-4 py-2 text-base font-semibold text-ink shadow-sm transition-colors hover:bg-secondary hover:text-bg disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
+            className="inline-flex items-center gap-1 rounded-md bg-primary px-4 py-2 font-display text-sm text-primary-ink shadow-shaft transition-colors hover:bg-signal hover:text-primary-ink disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-signal-press focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
           >
             {exporting ? 'Exporting…' : 'Export PDF'}
           </button>

@@ -57,7 +57,7 @@ export default function PdfToJpgPage() {
   return (
     <Container className="py-12">
       <header>
-        <h1 className="text-3xl font-semibold tracking-tight text-ink">PDF → JPG</h1>
+        <h1 className="text-3xl font-display tracking-tight text-ink">PDF → JPG</h1>
         <p className="mt-2 text-base text-ink/70">Render every page of a PDF to a JPG. Download them one by one. Stays on your device.</p>
       </header>
 
@@ -70,11 +70,11 @@ export default function PdfToJpgPage() {
       </div>
 
       {file && !busy && pages === null && (
-        <p className="mt-4 text-sm text-ink/70" data-testid="pdf-to-jpg-filename">{file.name}</p>
+        <p className="font-mono mt-4 text-sm text-ink/70" data-testid="pdf-to-jpg-filename">{file.name}</p>
       )}
 
       {busy && (
-        <p className="mt-6 text-sm text-ink/70" data-testid="pdf-to-jpg-busy">Converting…</p>
+        <p className="font-mono mt-6 text-sm text-ink/70" data-testid="pdf-to-jpg-busy">Converting…</p>
       )}
 
       {error && <p role="alert" className="mt-4 text-sm text-red-700">{error}</p>}
@@ -84,15 +84,15 @@ export default function PdfToJpgPage() {
           <p className="mb-4 text-sm text-ink/70">{pages.length} {pages.length === 1 ? 'image' : 'images'} ready.</p>
           <ul aria-label="Rendered pages" className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {pages.map((p, i) => (
-              <li key={p.name} className="rounded-md border border-ink/10 bg-bg p-3">
-                <img src={p.url} alt={p.name} className="mx-auto block max-h-64 rounded bg-white" />
+              <li key={p.name} className="rounded-md border border-border bg-surface p-3">
+                <img src={p.url} alt={p.name} className="mx-auto block max-h-64 rounded bg-surface" />
                 <div className="mt-3 flex items-center justify-between gap-2 text-sm">
                   <span className="truncate text-ink/80">{p.name}</span>
                   <button
                     type="button"
                     onClick={() => onDownload(p.url, p.name)}
                     data-testid={`pdf-to-jpg-download-${i + 1}`}
-                    className="rounded-md border border-ink/20 px-3 py-1.5 text-sm font-medium text-ink/80 hover:bg-ink/5"
+                    className="rounded-md bg-surface shadow-shaft border border-ink/20 px-3 py-1.5 font-display text-sm text-ink/80 shadow-shaft hover:bg-ink/5 hover:shadow-shaft-hover"
                   >
                     Download
                   </button>

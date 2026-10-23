@@ -70,7 +70,7 @@ export default function RotatePage() {
   return (
     <Container className="py-12">
       <header>
-        <h1 className="text-3xl font-semibold tracking-tight text-ink">Rotate PDF</h1>
+        <h1 className="text-3xl font-display tracking-tight text-ink">Rotate PDF</h1>
         <p className="mt-2 text-base text-ink/70">Rotate every page of a PDF by 90°, 180°, or 270°. Stays on your device.</p>
       </header>
 
@@ -83,15 +83,15 @@ export default function RotatePage() {
       </div>
 
       {file && pageCount > 0 && (
-        <section className="mt-6 rounded-md border border-ink/10 bg-bg p-4">
+        <section className="mt-6 rounded-md border border-border bg-surface p-4">
           <div className="flex items-baseline justify-between gap-4">
             <span className="truncate font-medium text-ink">{file.name}</span>
-            <span className="text-sm text-ink/50" data-testid="rotate-info">
+            <span className="font-mono text-sm text-ink/50" data-testid="rotate-info">
               {fmtSize(file.size)} · {pageCount} {pageCount === 1 ? 'page' : 'pages'} · current rotation {currentRotation}°
             </span>
           </div>
           <fieldset className="mt-4">
-            <legend className="mb-2 text-sm font-medium text-ink/80">Rotate by</legend>
+            <legend className="mb-2 font-display text-sm text-ink/80">Rotate by</legend>
             <div className="flex flex-wrap gap-4">
               {([90, 180, 270] as const).map((a) => (
                 <label key={a} className="flex items-center gap-2 text-sm text-ink/80">
@@ -117,7 +117,7 @@ export default function RotatePage() {
           onClick={onRotate}
           disabled={!file || busy}
           data-testid="rotate-action"
-          className="rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-ink hover:bg-secondary disabled:opacity-50"
+          className="rounded-md bg-primary px-5 py-2.5 font-display text-sm text-primary-ink shadow-shaft hover:bg-signal hover:shadow-shaft-hover disabled:opacity-50"
         >
           {busy ? 'Rotating…' : 'Rotate'}
         </button>
@@ -126,7 +126,7 @@ export default function RotatePage() {
             type="button"
             onClick={() => downloadBytes(result, 'rotated.pdf', 'application/pdf')}
             data-testid="rotate-download"
-            className="rounded-md border border-ink/20 px-5 py-2.5 text-sm font-medium text-ink/80 hover:bg-ink/5"
+            className="rounded-md border border-ink/20 px-5 py-2.5 font-display text-sm text-ink/80 shadow-shaft hover:bg-ink/5 hover:shadow-shaft-hover"
           >
             Download rotated.pdf
           </button>

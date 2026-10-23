@@ -306,7 +306,7 @@ function RestorePrompt({
       aria-labelledby="restore-prompt-title"
       aria-describedby="restore-prompt-desc"
       data-testid="restore-prompt"
-      className="mx-auto mb-6 max-w-md rounded-lg border border-ink/15 bg-white p-5 shadow-md"
+      className="mx-auto mb-6 max-w-md rounded-md border border-border bg-surface p-5 shadow-md"
     >
       <h2 id="restore-prompt-title" className="text-base font-semibold text-ink">
         Resume your last session?
@@ -319,7 +319,7 @@ function RestorePrompt({
           type="button"
           data-testid="restore-decline"
           onClick={onDecline}
-          className="rounded-md px-3 py-1.5 text-sm font-medium text-ink/70 hover:bg-ink/5"
+          className="rounded-md px-3 py-1.5 font-display text-sm text-ink/70 hover:bg-ink/5"
         >
           Start fresh
         </button>
@@ -327,7 +327,7 @@ function RestorePrompt({
           type="button"
           data-testid="restore-accept"
           onClick={onAccept}
-          className="rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-ink hover:bg-secondary"
+          className="rounded-md bg-primary px-3 py-1.5 font-display text-sm text-primary-ink shadow-shaft hover:bg-signal hover:shadow-shaft-hover"
         >
           Restore
         </button>
@@ -701,7 +701,7 @@ function LoadedEditorBody({
           <div
             ref={containerRef}
             data-testid="editor-pane"
-            className="flex-1 overflow-hidden bg-ink/5 p-6"
+            className="flex-1 overflow-hidden bg-surface-2 p-6"
             style={{ cursor: spaceHeld || panning ? 'grab' : 'default' }}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
@@ -727,7 +727,7 @@ function LoadedEditorBody({
                 // natural height, not the editor pane's. A minHeight:
                 // 100% made the wrapper as tall as the pane, so the
                 // page sat at the top with the editor background
-                // (bg-ink/5) showing below it — the page looked
+                // (bg-surface-2) showing below it — the page looked
                 // "extended." The page div itself has the correct
                 // width/height from the viewport; the wrapper just
                 // wraps it. Horizontal centering needs minWidth: 100%
@@ -828,7 +828,7 @@ function PageView({
 
   return (
     <div
-      className="relative mx-auto bg-white shadow-md"
+      className="relative mx-auto bg-surface shadow-md"
       style={{ width: viewport.cssWidth, height: viewport.cssHeight }}
     >
       <PdfCanvas page={page} numPages={pdf.numPages} zoom={zoom} rotation={rotation} viewport={viewport} />
@@ -872,5 +872,5 @@ function PdfCanvas({
   // ponytail: `PDF page {n} of {N}` is the a11y floor for screen
   // readers. The page proxy's `pageNumber` is 1-based; pair with the
   // doc's `numPages` for the count.
-  return <canvas ref={ref} data-testid="page-canvas" role="img" aria-label={`PDF page ${page.pageNumber} of ${numPages}`} className="absolute inset-0 block" />;
+  return <canvas ref={ref} data-testid="page-canvas" role="img" aria-label={`PDF page ${page.pageNumber} of ${numPages}`} className="font-mono absolute inset-0 block" />;
 }

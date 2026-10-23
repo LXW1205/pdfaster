@@ -113,7 +113,7 @@ export default function ExtractPage() {
   return (
     <Container className="py-12">
       <header>
-        <h1 className="text-3xl font-semibold tracking-tight text-ink">Extract pages</h1>
+        <h1 className="text-3xl font-display tracking-tight text-ink">Extract pages</h1>
         <p className="mt-2 text-base text-ink/70">Pick the pages you want in a new PDF. Single pages or ranges. Stays on your device.</p>
       </header>
 
@@ -129,7 +129,7 @@ export default function ExtractPage() {
         <section className="mt-6">
           <div className="mb-3 space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="text-sm text-ink/70">
+              <div className="font-mono text-sm text-ink/70">
                 <span className="font-medium text-ink">{selectedCount}</span> of {pageCount} selected
               </div>
               <div className="flex flex-wrap gap-2">
@@ -168,14 +168,14 @@ export default function ExtractPage() {
                   onChange={(e) => setRangeSpec(e.target.value)}
                   placeholder="1, 3, 5-7"
                   data-testid="extract-ranges"
-                  className="w-full rounded-md border border-ink/20 px-3 py-1.5 text-ink focus:border-primary focus:outline-none"
+                  className="w-full rounded-md bg-surface shadow-shaft border border-ink/20 px-3 py-1.5 text-ink focus:border-signal-press focus:outline-none"
                 />
               </label>
               <button
                 type="button"
                 onClick={applyRangeSpec}
                 data-testid="extract-apply"
-                className="rounded-md border border-ink/20 px-4 py-1.5 text-sm font-medium text-ink/80 hover:bg-ink/5"
+                className="rounded-md bg-surface shadow-shaft border border-ink/20 px-4 py-1.5 font-display text-sm text-ink/80 shadow-shaft hover:bg-ink/5 hover:shadow-shaft-hover"
               >
                 Apply
               </button>
@@ -184,7 +184,7 @@ export default function ExtractPage() {
           <PagedPageList
             count={pageCount}
             ariaLabel="Pages"
-            className="divide-y divide-ink/10 rounded-md border border-ink/10"
+            className="divide-y divide-border rounded-md border border-border"
             // ponytail: key on `i` (the position in the list). The
             // rows don't move around, so the index is the stable
             // identity. Same as the prior <ul key={i}>.
@@ -194,7 +194,7 @@ export default function ExtractPage() {
               return (
                 <div className="flex items-center gap-3 px-4 py-2 text-sm">
                   {previewPdf && <PagePreview pdf={previewPdf} pageIndex={i} />}
-                  <span className="w-10 font-medium text-ink">{i + 1}.</span>
+                  <span className="w-10 font-mono text-ink">{i + 1}.</span>
                   <span className="flex-1 text-ink/70">Page {i + 1} / {pageWidth}×{pageHeight} pt</span>
                   <input
                     type="checkbox"
@@ -217,7 +217,7 @@ export default function ExtractPage() {
           onClick={onExtract}
           disabled={!file || selectedCount === 0 || busy}
           data-testid="extract-action"
-          className="rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-ink hover:bg-secondary disabled:opacity-50"
+          className="rounded-md bg-primary px-5 py-2.5 font-display text-sm text-primary-ink shadow-shaft hover:bg-signal hover:shadow-shaft-hover disabled:opacity-50"
         >
           {busy ? 'Extracting…' : `Extract ${selectedCount} ${selectedCount === 1 ? 'page' : 'pages'}`}
         </button>
@@ -226,7 +226,7 @@ export default function ExtractPage() {
             type="button"
             onClick={() => downloadBytes(result, 'extracted.pdf', 'application/pdf')}
             data-testid="extract-download"
-            className="rounded-md border border-ink/20 px-5 py-2.5 text-sm font-medium text-ink/80 hover:bg-ink/5"
+            className="rounded-md border border-ink/20 px-5 py-2.5 font-display text-sm text-ink/80 shadow-shaft hover:bg-ink/5 hover:shadow-shaft-hover"
           >
             Download extracted.pdf
           </button>

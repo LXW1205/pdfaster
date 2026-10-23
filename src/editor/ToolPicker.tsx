@@ -19,7 +19,7 @@ export function ToolPicker() {
   const setActive = useUIStore((s) => s.setActiveTool);
   const tools = AnnotationRegistry.list();
   return (
-    <div role="toolbar" aria-label="Annotation tools" className="flex gap-1">
+    <div role="toolbar" aria-label="Annotation tools" className="rise flex flex-wrap gap-1 rounded-md bg-surface-2 p-1 shadow-shaft">
       <button
         key="move"
         type="button"
@@ -28,8 +28,8 @@ export function ToolPicker() {
         onClick={() => setActive('select')}
         className={
           active === 'select'
-            ? 'rounded-md bg-primary px-3 py-2 text-base font-medium text-ink'
-            : 'rounded-md border border-ink/30 px-3 py-2 text-base font-medium text-ink/70 hover:bg-ink/5'
+            ? 'rounded-md bg-signal px-3 py-2 font-display text-xs text-ink shadow-toplight'
+            : 'rounded-md border border-ink/30 px-3 py-2 font-display text-sm text-ink/70 hover:bg-ink/5'
         }
       >
         Move
@@ -42,8 +42,8 @@ export function ToolPicker() {
           onClick={() => setActive(t.tool)}
           className={
             active === t.tool
-              ? 'rounded-md bg-primary px-3 py-2 text-base font-medium text-ink'
-              : 'rounded-md border border-ink/30 px-3 py-2 text-base font-medium text-ink/70 hover:bg-ink/5'
+              ? 'rounded-md bg-signal px-3 py-2 font-display text-xs text-ink shadow-toplight'
+              : 'rounded-md border border-ink/30 px-3 py-2 font-display text-sm text-ink/70 hover:bg-ink/5'
           }
         >
           {t.label}

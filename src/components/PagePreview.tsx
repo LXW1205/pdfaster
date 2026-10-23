@@ -49,7 +49,7 @@ export function PagePreview({ pdf, pageIndex, width = 100, className }: Props) {
     <canvas
       ref={ref}
       data-testid={`page-preview-${pageIndex}`}
-      className={className ?? 'block shrink-0 rounded border border-ink/10 bg-white'}
+      className={className ?? 'block shrink-0 rounded border border-border bg-surface'}
     />
   );
 }

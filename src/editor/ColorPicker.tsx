@@ -43,7 +43,7 @@ export function ColorPicker() {
             aria-pressed={isActive}
             title={`Color ${i + 1}`}
             className={`h-5 w-5 rounded-sm border ${
-              isActive ? 'border-secondary ring-2 ring-primary' : 'border-ink/20'
+              isActive ? 'border-signal ring-2 ring-signal' : 'border-ink/20'
             }`}
             style={{
               backgroundColor: `rgb(${Math.round(c[0] * 255)}, ${Math.round(c[1] * 255)}, ${Math.round(c[2] * 255)})`,

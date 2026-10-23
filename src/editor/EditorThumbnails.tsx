@@ -210,7 +210,7 @@ export function EditorThumbnails({ pdf }: { pdf: PDFDocumentProxy }) {
     <aside
       ref={scrollRef}
       data-testid="editor-thumbnails"
-      className="flex w-40 shrink-0 flex-col overflow-y-auto border-r border-ink/10 bg-bg/50 p-2"
+      className="flex w-40 shrink-0 flex-col overflow-y-auto border-r border-border bg-surface-2 p-2"
     >
       <div style={{ height: pdf.numPages * thumbHeight, position: 'relative' }}>
         {Array.from({ length: pdf.numPages }, (_, i) => {
@@ -226,7 +226,7 @@ export function EditorThumbnails({ pdf }: { pdf: PDFDocumentProxy }) {
                 type="button"
                 onClick={() => setPageIndex(i)}
                 data-testid={`thumb-placeholder-${i}`}
-                className="absolute left-0 right-0 flex items-center justify-center text-xs tabular-nums text-ink/40 hover:bg-ink/5"
+                className="absolute left-0 right-0 flex items-center justify-center text-xs tabular-nums font-mono text-ink/40 hover:bg-ink/5"
                 style={{ top: i * thumbHeight, height: thumbHeight }}
               >
                 {i + 1}
@@ -330,14 +330,14 @@ function Thumbnail({
       }}
       data-testid={`thumb-${pageIndex}`}
       data-active={active ? 'true' : 'false'}
-      className={`flex w-full cursor-grab flex-col items-stretch rounded border bg-white transition-colors active:cursor-grabbing ${
+      className={`flex w-full cursor-grab flex-col items-stretch rounded border bg-surface transition-colors active:cursor-grabbing ${
         active
-          ? 'border-secondary ring-2 ring-primary'
-          : 'border-ink/10 hover:border-ink/30'
+          ? 'border-signal ring-2 ring-signal'
+          : 'border-border hover:border-ink/30'
       }`}
     >
       <canvas ref={canvasRef} className="block w-full rounded-t" />
-      <div className="py-1 text-center text-xs tabular-nums text-ink/70">
+      <div className="py-1 text-center text-xs tabular-nums font-mono text-ink/70">
         {pageIndex + 1}
       </div>
     </button>

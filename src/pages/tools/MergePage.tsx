@@ -55,7 +55,7 @@ export default function MergePage() {
   return (
     <Container className="py-12">
       <header>
-        <h1 className="text-3xl font-semibold tracking-tight text-ink">Merge PDFs</h1>
+        <h1 className="text-3xl font-display tracking-tight text-ink">Merge PDFs</h1>
         <p className="mt-2 text-base text-ink/70">Combine multiple PDFs into one. Order matters — files merge top to bottom.</p>
       </header>
 
@@ -69,7 +69,7 @@ export default function MergePage() {
       </div>
 
       {files.length > 0 && (
-        <ul aria-label="Files to merge" className="mt-6 divide-y divide-ink/10 rounded-md border border-ink/10">
+        <ul aria-label="Files to merge" className="mt-6 divide-y divide-border rounded-md border border-border">
           {files.map((f, i) => (
             <li key={`${f.name}-${i}`} className="flex items-center gap-3 px-4 py-3 text-sm">
               <span className="font-medium text-ink">{i + 1}.</span>
@@ -89,7 +89,7 @@ export default function MergePage() {
           onClick={onMerge}
           disabled={files.length < 2 || busy}
           data-testid="merge-action"
-          className="rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-ink hover:bg-secondary disabled:opacity-50"
+          className="rounded-md bg-primary px-5 py-2.5 font-display text-sm text-primary-ink shadow-shaft hover:bg-signal hover:shadow-shaft-hover disabled:opacity-50"
         >
           {busy ? 'Merging…' : `Merge ${files.length} file${files.length === 1 ? '' : 's'}`}
         </button>
@@ -98,7 +98,7 @@ export default function MergePage() {
             type="button"
             onClick={() => downloadBytes(result, 'merged.pdf', 'application/pdf')}
             data-testid="merge-download"
-            className="rounded-md border border-ink/20 px-5 py-2.5 text-sm font-medium text-ink/80 hover:bg-ink/5"
+            className="rounded-md border border-ink/20 px-5 py-2.5 font-display text-sm text-ink/80 shadow-shaft hover:bg-ink/5 hover:shadow-shaft-hover"
           >
             Download merged.pdf
           </button>

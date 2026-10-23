@@ -48,7 +48,7 @@ export default function WatermarkPage() {
   return (
     <Container className="py-12">
       <header>
-        <h1 className="text-3xl font-semibold tracking-tight text-ink">Watermark PDF</h1>
+        <h1 className="text-3xl font-display tracking-tight text-ink">Watermark PDF</h1>
         <p className="mt-2 text-base text-ink/70">Overlay a text watermark on every page. Stays on your device.</p>
       </header>
 
@@ -61,7 +61,7 @@ export default function WatermarkPage() {
       </div>
 
       {file && (
-        <section className="mt-6 rounded-md border border-ink/10 bg-bg p-4">
+        <section className="mt-6 rounded-md border border-border bg-surface p-4">
           <div className="text-sm text-ink/70">
             <span className="font-medium text-ink">{file.name}</span>
           </div>
@@ -73,7 +73,7 @@ export default function WatermarkPage() {
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 data-testid="watermark-text"
-                className="rounded-md border border-ink/20 px-3 py-1.5 text-ink focus:border-primary focus:outline-none"
+                className="rounded-md bg-surface shadow-shaft border border-ink/20 px-3 py-1.5 text-ink focus:border-signal-press focus:outline-none"
               />
             </label>
             <label className="flex flex-col text-sm text-ink/80">
@@ -95,7 +95,7 @@ export default function WatermarkPage() {
                 value={color}
                 onChange={(e) => setColor(e.target.value as typeof color)}
                 data-testid="watermark-color"
-                className="rounded-md border border-ink/20 px-3 py-1.5 text-ink focus:border-primary focus:outline-none"
+                className="rounded-md bg-surface shadow-shaft border border-ink/20 px-3 py-1.5 text-ink focus:border-signal-press focus:outline-none"
               >
                 <option value="gray">Gray</option>
                 <option value="red">Red</option>
@@ -104,7 +104,7 @@ export default function WatermarkPage() {
               </select>
             </label>
             <fieldset>
-              <legend className="mb-1 text-sm font-medium text-ink/80">Position</legend>
+              <legend className="mb-1 font-display text-sm text-ink/80">Position</legend>
               <div className="flex flex-wrap gap-4">
                 {(['center', 'top', 'bottom', 'diagonal'] as const).map((p) => (
                   <label key={p} className="flex items-center gap-2 text-sm text-ink/80">
@@ -131,7 +131,7 @@ export default function WatermarkPage() {
           onClick={onApply}
           disabled={!file || busy || text.length === 0}
           data-testid="watermark-action"
-          className="rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-ink hover:bg-secondary disabled:opacity-50"
+          className="rounded-md bg-primary px-5 py-2.5 font-display text-sm text-primary-ink shadow-shaft hover:bg-signal hover:shadow-shaft-hover disabled:opacity-50"
         >
           {busy ? 'Applying…' : 'Apply watermark'}
         </button>
@@ -140,7 +140,7 @@ export default function WatermarkPage() {
             type="button"
             onClick={() => downloadBytes(result, 'watermarked.pdf', 'application/pdf')}
             data-testid="watermark-download"
-            className="rounded-md border border-ink/20 px-5 py-2.5 text-sm font-medium text-ink/80 hover:bg-ink/5"
+            className="rounded-md border border-ink/20 px-5 py-2.5 font-display text-sm text-ink/80 shadow-shaft hover:bg-ink/5 hover:shadow-shaft-hover"
           >
             Download watermarked.pdf
           </button>

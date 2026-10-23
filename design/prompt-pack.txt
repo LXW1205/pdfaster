@@ -1,0 +1,29 @@
+# pdfaster · Hi-Fi Instrument — prompt pack for follow-up restyles
+
+Voice for future graphic-only passes on this repo (design/DESIGN.md is the contract;
+design/tokens.css is the source of truth; `@theme inline` in src/styles/theme.css wires
+it). All prompts assume: graphics and animations only — no features, no copy, no logic,
+no router/state/lib changes.
+
+1. "Make the tool grid feel like a rack unit: gap the ToolPicker into labelled bays with
+   engraved grooves between channels and screw dots on the rail ends; keep one signal
+   orange on the engaged tool only."
+2. "Add a VU-meter-style progress state to the compress tool: a static-segment mono
+   readout bar that fills during the run, engine needle pinned at the end for a 600ms
+   hold, then settles. Signal orange fill, ink labels, no looping animation."
+3. "Give the editor thumbnails a channel strip treatment: surface-2 casework, hairline
+   groove dividers, mono page numbers, and one top-lit radial only on the active thumb."
+4. "Turn the hero into the machine's faceplate: screw dots at the corners, an engraved
+   hairline circle behind the headline, and a red LED dot beside 'stays on your device'
+   that lights signal orange while a tool is running."
+5. "Introduce the dial-toplight treatment on circular controls only: undo/redo become
+   engraved hairline circles with a radial top-light at 35% 28%; pressed state sinks
+   2px and deepens the inset. Do not invent new circular controls."
+6. "Rebuild the FileDropZone as an input cassette bay: dashed groove is the cassette
+   slot, idle = surface-2 inset, drag-engaged = signal hairline; numeric readout under
+   the slot in mono for file count and size."
+7. "Engrave the settings rows on Watermark/Page numbers: 1px grooves between control
+   fields, caps mono micro-labels left, numeric readouts right in tabular mono."
+8. "Audit the app for a second orange: any state where two signal-orange elements are
+   visible in one group must demote the older one to ink-on-cream. Report the pairs you
+   find and the token you used instead."

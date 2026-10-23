@@ -46,6 +46,33 @@ React 19 · Vite · TypeScript · [pdf.js](https://mozilla.github.io/pdf.js/) ·
 
 See [docs/superpowers/specs/2026-06-19-pdfaster-design.md](docs/superpowers/specs/2026-06-19-pdfaster-design.md) for the design doc (architecture, export pipeline, storage strategy, threat model, honest ceilings).
 
+## 🤖 Agent integration (MCP)
+
+pdfaster ships a **MCP server** (`mcp/server.ts`) so a local coding agent (OpenCode) can edit PDFs on Victor's behalf — by reusing the exact same pure pdf-lib engine under `src/tools/` that the web app uses. Nothing is duplicated: the server just wraps bytes in DOM `File` objects (Node 22 has the `File` global) and calls the real functions. It runs fully locally over stdio — no network calls, no uploads, nothing ever leaves the machine, consistent with the "process everything in your browser" thesis.
+
+What's exposed:
+
+- **`pdf_info`** — inspect first: page count, per-page size (pt) + rotation, AcroForm presence + field names. Read-only.
+- **`pdf_merge`** — merge PDFs in array order.
+- **`pdf_rotate`** — rotate every page by 90/180/270°.
+- **`pdf_extract_pages`** — copy selected pages into a new PDF (indices are **0-based**, document order).
+- **`pdf_delete_pages`** — keep the given 0-based indices, delete the rest.
+- **`pdf_reorder`** — permute pages (array of 0-based indices = new order).
+- **`pdf_watermark`** — text stamp on every page (text, opacity, color, position).
+- **`pdf_page_numbers`** — burn page numbers (position + format).
+- **`pdf_crop`** — uniform margin crop, all sides, in points.
+- **`pdf_compress`** — strip metadata + object streams (honest: images are NOT re-encoded).
+- **`pdf_jpg_to_pdf`** — images (JPEG/PNG) → one PDF, one page each, native size.
+
+Convention: every input and the `out` target are **absolute file paths** (relatives are rejected); the server refuses to overwrite an existing output unless `out` *is* the input (safe in-place edit). The agent should call `pdf_info` first to plan page indices. Page ranges out of scope for the browser pipeline (PDF→JPG) are skipped — that tool needs canvas/pdf.js rendering and stays web-only for now.
+
+Registration lives in `~/.config/opencode/opencode.jsonc` under `mcp.servers.pdfaster` (runs via `tsx`). To run the server manually for development:
+
+```bash
+cd ~/home/project/pdfaster
+./node_modules/.bin/tsx mcp/server.ts   # then speak JSON-RPC 2.0 on stdin/stdout
+```
+
 ## 🏗 Inspiration
 
 - **[MixToolz](https://github.com/LXW1205/MixToolz-TT1L-G5)** — the original group project. The privacy thesis and the "process everything in your browser" stance come from there.

@@ -54,7 +54,7 @@ export default function CompressPage() {
   return (
     <Container className="py-12">
       <header>
-        <h1 className="text-3xl font-semibold tracking-tight text-ink">Compress PDF</h1>
+        <h1 className="text-3xl font-display tracking-tight text-ink">Compress PDF</h1>
         <p className="mt-2 text-base text-ink/70">Strips metadata and re-saves with object streams. Honest before/after — no fake percentage claim. Stays on your device.</p>
       </header>
 
@@ -67,10 +67,10 @@ export default function CompressPage() {
       </div>
 
       {file && (
-        <section className="mt-6 rounded-md border border-ink/10 bg-bg p-4">
+        <section className="mt-6 rounded-md border border-border bg-surface p-4">
           <div className="flex items-baseline justify-between gap-4">
             <span className="truncate font-medium text-ink">{file.name}</span>
-            <span className="text-sm text-ink/50" data-testid="compress-original">
+            <span className="font-mono text-sm text-ink/50" data-testid="compress-original">
               Original: {fmtSize(file.size)}
             </span>
           </div>
@@ -78,14 +78,14 @@ export default function CompressPage() {
       )}
 
       {result && (
-        <section className="mt-3 rounded-md border border-ink/10 bg-bg p-4">
+        <section className="mt-3 rounded-md border border-border bg-surface p-4">
           <div className="flex items-baseline justify-between gap-4">
-            <span className="text-sm text-ink/70" data-testid="compress-result">Compressed: {fmtSize(result.after)}</span>
+            <span className="font-mono text-sm text-ink/70" data-testid="compress-result">Compressed: {fmtSize(result.after)}</span>
             {delta && (
               <span
                 data-testid="compress-delta"
                 className={
-                  delta.tone === 'saved' ? 'text-sm font-medium text-secondary'
+                  delta.tone === 'saved' ? 'text-sm font-medium text-signal'
                   : delta.tone === 'bigger' ? 'text-sm font-medium text-amber-700'
                   : 'text-sm text-ink/60'
                 }
@@ -103,7 +103,7 @@ export default function CompressPage() {
           onClick={onCompress}
           disabled={!file || busy}
           data-testid="compress-action"
-          className="rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-ink hover:bg-secondary disabled:opacity-50"
+          className="rounded-md bg-primary px-5 py-2.5 font-display text-sm text-primary-ink shadow-shaft hover:bg-signal hover:shadow-shaft-hover disabled:opacity-50"
         >
           {busy ? 'Compressing…' : 'Compress'}
         </button>
@@ -112,7 +112,7 @@ export default function CompressPage() {
             type="button"
             onClick={() => downloadBytes(result.bytes, 'compressed.pdf', 'application/pdf')}
             data-testid="compress-download"
-            className="rounded-md border border-ink/20 px-5 py-2.5 text-sm font-medium text-ink/80 hover:bg-ink/5"
+            className="rounded-md border border-ink/20 px-5 py-2.5 font-display text-sm text-ink/80 shadow-shaft hover:bg-ink/5 hover:shadow-shaft-hover"
           >
             Download compressed.pdf
           </button>
