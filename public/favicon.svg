@@ -1,19 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
-  <!-- pdfaster · Hi-Fi Instrument · Braun dial glyph (design/DESIGN.md contract) -->
+  <!-- pdfaster · Hi-Fi Instrument · just the knob (design/DESIGN.md) -->
   <defs>
-    <radialGradient id="toplight" cx="0.35" cy="0.28" r="0.75">
-      <stop offset="0" stop-color="#ffffff" stop-opacity="0.28"/>
-      <stop offset="0.55" stop-color="#ffffff" stop-opacity="0"/>
-      <stop offset="1" stop-color="#000000" stop-opacity="0.22"/>
+    <radialGradient id="toplight" cx="0.35" cy="0.26" r="0.8">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.3"/>
+      <stop offset="0.5" stop-color="#3b3b38" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.25"/>
     </radialGradient>
   </defs>
-  <!-- cream casing + engraved rim -->
-  <rect width="48" height="48" rx="10" fill="#f7f5ef"/>
-  <rect x="4" y="4" width="40" height="40" rx="7.5" fill="none" stroke="#d9d5cc" stroke-width="1.5"/>
-  <!-- control dial: black key, top-lit -->
-  <circle cx="24" cy="24" r="13" fill="#1a1a18"/>
-  <circle cx="24" cy="24" r="13" fill="url(#toplight)"/>
-  <circle cx="24" cy="24" r="9" fill="none" stroke="#f7f5ef" stroke-opacity="0.35" stroke-width="1.5"/>
-  <!-- signal pointer (orange = engaged) -->
-  <rect x="22.6" y="13.5" width="2.8" height="9" rx="1.4" fill="#ff6b1a"/>
+  <!-- the knob IS the icon: full-bleed dial -->
+  <circle cx="24" cy="24" r="24" fill="#2b2a28"/>
+  <circle cx="24" cy="24" r="24" fill="url(#toplight)"/>
+  <!-- engraved detent rings -->
+  <circle cx="24" cy="24" r="18.5" fill="none" stroke="#f7f5ef" stroke-opacity="0.3" stroke-width="1.6"/>
+  <circle cx="24" cy="24" r="14" fill="none" stroke="#f7f5ef" stroke-opacity="0.16" stroke-width="1.4"/>
+  <!-- signal pointer, needs to read at 16px -->
+  <rect x="21.4" y="4.5" width="5.2" height="11.5" rx="2.6" fill="#ff6b1a"/>
+  <!-- centre cap -->
+  <circle cx="24" cy="24" r="3.4" fill="#1a1a18" stroke="#f7f5ef" stroke-opacity="0.25" stroke-width="1.2"/>
 </svg>
